@@ -474,7 +474,10 @@
             <h1>Practical Architecture for<br><span class="highlight">Object Storage Acceleration</span></h1>
             <p class="tagline">High-performance, S3-compatible caching and write acceleration for cloud object storage</p>
 
-            <img class="hero-image" src="assets/images/ecosystem.png" alt="KyteStore ecosystem: S3 applications, gateway, cache and storage tiers, and public cloud object storage" decoding="async">
+            <picture>
+                <source srcset="assets/images/ecosystem.webp" type="image/webp">
+                <img class="hero-image" src="assets/images/ecosystem.png" width="1200" height="1363" alt="KyteStore ecosystem: S3 applications, gateway, cache and storage tiers, and public cloud object storage" decoding="async" fetchpriority="high">
+            </picture>
             <p class="hero-caption">Ecosystem placement: an S3-compatible front end for your apps, with cached reads and accelerated writes back to remote buckets.</p>
         </div>
     </section>
@@ -520,7 +523,7 @@
             <h2>Multi-Layer Design for Performance and Reliability</h2>
             <p>KyteStore separates the stateless S3 gateway, caching tier, replicated chunk storage, and metadata service so each layer can scale and evolve on its own. The diagram below summarizes how requests move through the stack.</p>
 
-            <img class="arch-diagram" src="assets/images/architecture.png" alt="KyteStore architecture diagram: S3 gateway, cache subsystem, ChunkServer, MetaServer, and remote object storage" loading="lazy" decoding="async">
+            <img class="arch-diagram" src="assets/images/architecture.png" width="1200" height="1089" alt="KyteStore architecture diagram: S3 gateway, cache subsystem, ChunkServer, MetaServer, and remote object storage" loading="lazy" decoding="async">
         </div>
     </section>
 
