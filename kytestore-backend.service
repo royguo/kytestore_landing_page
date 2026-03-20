@@ -1,0 +1,21 @@
+# Install: sudo cp kytestore-backend.service /etc/systemd/system/
+#          sudo systemctl daemon-reload && sudo systemctl enable --now kytestore-backend
+
+[Unit]
+Description=KyteStore Python HTTP backend (behind Caddy)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/innovic.cn
+Environment=KYTESTORE_BIND=127.0.0.1 KYTESTORE_PORT=9080
+ExecStart=/root/innovic.cn/python3-local /root/innovic.cn/server.py
+Restart=on-failure
+RestartSec=3
+
+StandardOutput=append:/root/innovic.cn/server.log
+StandardError=append:/root/innovic.cn/server.log
+
+[Install]
+WantedBy=multi-user.target
