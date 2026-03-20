@@ -5,7 +5,9 @@ import os
 import signal
 import sys
 
-PORT = 80
+# KYTESTORE_BIND / KYTESTORE_PORT: use 127.0.0.1:9080 behind Caddy; 0.0.0.0:80 for standalone.
+PORT = int(os.environ.get("KYTESTORE_PORT", "9080"))
+BIND = os.environ.get("KYTESTORE_BIND", "127.0.0.1")
 DIRECTORY = "/root/innovic.cn"
 
 class KyteStoreHandler(http.server.SimpleHTTPRequestHandler):
@@ -33,8 +35,8 @@ def main():
     os.chdir(DIRECTORY)
 
     socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", PORT), KyteStoreHandler) as httpd:
-        print("[KyteStore Server] Serving on port %d" % PORT)
+    with socketserver.TCPServer((BIND, PORT), KyteStoreHandler) as httpd:
+        print("[KyteStore Server] Serving on %s:%d" % (BIND, PORT))
         print("[KyteStore Server] Document root: %s" % DIRECTORY)
         sys.stdout.flush()
         try:

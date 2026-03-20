@@ -1,0 +1,11 @@
+# Production: /etc/caddy/Caddyfile — after edits: caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
+
+{
+	email royaki@vip.qq.com
+	storage file_system /var/lib/caddy
+}
+
+kytestore.com {
+	reverse_proxy 127.0.0.1:9080
+	encode gzip
+}

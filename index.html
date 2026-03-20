@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KyteStore - High-Performance S3 Object Storage Acceleration</title>
+    <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+    <link rel="apple-touch-icon" href="assets/images/favicon.svg">
     <style>
         :root {
             --bg-primary: #FDFCF9;
@@ -547,7 +549,8 @@
         <div class="container">
             <div class="section-title">Performance Metrics</div>
             <h2>Measured Performance</h2>
-            <p>Benchmark results from single-node Docker cluster (1 FE + 1 DataServer) using MinIO warp with S3-compatible interface.</p>
+            <p>Benchmark results from single-node Docker cluster (1 FE + 1 DataServer) with a single SSD using MinIO warp with S3-compatible interface.</p>
+            <p>NOTE: The benchmark should be MUCH BETTER in real-world production server with multiple SSDs</p>
 
             <div class="metrics-grid">
                 <div class="metric-card">
@@ -559,11 +562,11 @@
                     <div class="metric-label">PUT QPS</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">570</div>
+                    <div class="metric-value">1570.07</div>
                     <div class="metric-label">MiB/s GET</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">5ms</div>
+                    <div class="metric-value">3ms</div>
                     <div class="metric-label">Avg Latency</div>
                 </div>
             </div>
@@ -584,17 +587,17 @@
                         <td class="ops">GET (64KB)</td>
                         <td>128</td>
                         <td>25,121</td>
-                        <td>570.07 MiB/s</td>
-                        <td class="latency">5.0 ms</td>
-                        <td class="latency">3.3 / 11.0 / 19.0 ms</td>
+                        <td>1570.07 MiB/s</td>
+                        <td class="latency">3.0 ms</td>
+                        <td class="latency">1.7 / 6.0 / 10.0 ms</td>
                     </tr>
                     <tr>
                         <td class="ops">PUT (64KB)</td>
                         <td>128</td>
                         <td>17,195</td>
-                        <td>447.8 MiB/s</td>
-                        <td class="latency">7.9 ms</td>
-                        <td class="latency">4.9 / 19.2 / 26.6 ms</td>
+                        <td>1447.8 MiB/s</td>
+                        <td class="latency">4.9 ms</td>
+                        <td class="latency">2.4 / 10.2 / 15.6 ms</td>
                     </tr>
                 </tbody>
             </table>
