@@ -1,0 +1,6 @@
+*.pid
+server.log
+.stop_marker
+__pycache__/
+*.pyc
+.Python

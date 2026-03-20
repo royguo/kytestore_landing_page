@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KyteStore - High-Performance S3 Object Storage Acceleration</title>
+    <style>
+        :root {
+            --bg-primary: #FDFCF9;
+            --bg-secondary: #F7F7F5;
+            --bg-tertiary: #F0EFEB;
+            --text-primary: #1F1F1F;
+            --text-secondary: #3C3C3C;
+            --text-muted: #6B6B6B;
+            --accent: #2F5F8F;
+            --accent-dim: #1E4A6E;
+            --border: #E4E4E2;
+            --border-strong: #C4C0B8;
+            --compare-warm: #B87A7E;
+            --compare-warm-bg: #FBF6F5;
+            --compare-cool-bg: #F3F6F8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Georgia, "Times New Roman", Times, serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            font-size: 17px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        header {
+            border-bottom: 3px double var(--border-strong);
+            padding: 20px 0;
+            margin-bottom: 64px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: var(--text-primary);
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            margin-left: 40px;
+            font-size: 13px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            transition: color 0.2s;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        nav a:hover {
+            color: var(--accent);
+        }
+
+        .hero {
+            text-align: center;
+            padding: 72px 0 80px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .hero h1 {
+            font-size: 52px;
+            font-weight: normal;
+            letter-spacing: 0.06em;
+            margin-bottom: 28px;
+            line-height: 1.12;
+            color: var(--text-primary);
+        }
+
+        .hero h1 .highlight {
+            color: var(--accent);
+        }
+
+        .hero .tagline {
+            font-size: 20px;
+            color: var(--text-secondary);
+            font-style: italic;
+            max-width: 640px;
+            margin: 0 auto 36px;
+        }
+
+        .hero-image {
+            max-width: 100%;
+            width: min(100%, 920px);
+            height: auto;
+            margin: 48px auto 0;
+            display: block;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 28px rgba(31, 31, 31, 0.07);
+        }
+
+        .hero-caption {
+            margin: 16px auto 0;
+            max-width: 640px;
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.55;
+            font-style: normal;
+        }
+
+        .section {
+            padding: 80px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: var(--text-muted);
+            margin-bottom: 28px;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .section h2 {
+            font-size: 38px;
+            font-weight: normal;
+            margin-bottom: 24px;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .section p {
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin-bottom: 20px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 28px;
+            margin-top: 48px;
+        }
+
+        .feature-card {
+            background: var(--bg-primary);
+            padding: 32px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 0 rgba(31, 31, 31, 0.04);
+        }
+
+        .feature-card h3 {
+            font-size: 19px;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+
+        .feature-card p {
+            font-size: 15px;
+            margin-bottom: 0;
+        }
+
+        .architecture-section {
+            background: var(--bg-secondary);
+            padding: 80px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .architecture-section .section-title {
+            margin-bottom: 28px;
+        }
+
+        .architecture-section h2 {
+            font-size: 38px;
+            font-weight: normal;
+            margin-bottom: 20px;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .architecture-section p {
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin-bottom: 20px;
+        }
+
+        .arch-diagram {
+            max-width: 100%;
+            width: min(100%, 960px);
+            height: auto;
+            margin: 36px auto 0;
+            display: block;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 28px rgba(31, 31, 31, 0.07);
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+            margin-top: 48px;
+        }
+
+        .comparison-box {
+            padding: 36px;
+            border: 1px solid var(--border);
+            background: var(--bg-primary);
+        }
+
+        .comparison-box.traditional {
+            border-color: #D4B8B8;
+            background: var(--compare-warm-bg);
+        }
+
+        .comparison-box.kytestore {
+            border-color: #9BB0C4;
+            background: var(--compare-cool-bg);
+        }
+
+        .comparison-box h3 {
+            font-size: 16px;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .comparison-box.traditional h3 {
+            color: var(--compare-warm);
+        }
+
+        .comparison-box.kytestore h3 {
+            color: var(--accent);
+        }
+
+        .comparison-box ul {
+            list-style: none;
+            color: var(--text-secondary);
+        }
+
+        .comparison-box ul li {
+            margin-bottom: 12px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .comparison-box ul li::before {
+            content: "—";
+            position: absolute;
+            left: 0;
+            color: var(--text-muted);
+        }
+
+        .comparison-box.kytestore ul li::before {
+            color: var(--accent);
+        }
+
+        .metrics {
+            background: var(--bg-tertiary);
+            padding: 80px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .metrics h2 {
+            font-size: 38px;
+            font-weight: normal;
+            margin-bottom: 20px;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .metrics p {
+            color: var(--text-secondary);
+            max-width: 700px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-top: 48px;
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 28px;
+            border: 1px solid var(--border);
+            background-color: rgba(255, 252, 249, 0.72);
+        }
+
+        .metric-value {
+            font-size: 44px;
+            color: var(--accent-dim);
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-family: Georgia, serif;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .performance-table {
+            width: 100%;
+            margin-top: 48px;
+            border-collapse: collapse;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+        }
+
+        .performance-table th,
+        .performance-table td {
+            padding: 16px 18px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .performance-table th {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg-secondary);
+        }
+
+        .performance-table td {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        .performance-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .performance-table .ops {
+            color: var(--accent-dim);
+            font-weight: bold;
+        }
+
+        .performance-table .latency {
+            font-family: "Courier New", monospace;
+            font-size: 14px;
+        }
+
+        .contact {
+            text-align: center;
+            padding: 96px 0;
+            background: var(--bg-primary);
+        }
+
+        .contact h2 {
+            font-size: 36px;
+            margin-bottom: 16px;
+            font-weight: normal;
+            color: var(--text-primary);
+        }
+
+        .contact p {
+            max-width: 560px;
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: 28px;
+            color: var(--text-secondary);
+        }
+
+        .contact-email {
+            font-size: 17px;
+            font-weight: 500;
+            color: var(--accent);
+            text-decoration: none;
+            letter-spacing: 0.02em;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .contact-email:hover {
+            text-decoration: underline;
+            color: var(--accent-dim);
+        }
+
+        footer {
+            border-top: 3px double var(--border-strong);
+            padding: 36px 0;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 32px;
+                letter-spacing: 0.04em;
+            }
+
+            .section h2,
+            .architecture-section h2 {
+                font-size: 30px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+
+            nav a {
+                margin-left: 18px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">Kyte<span>Store</span></div>
+                <nav>
+                    <a href="#features">Features</a>
+                    <a href="#architecture">Architecture</a>
+                    <a href="#performance">Performance</a>
+                    <a href="#contact">Contact</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h1>Proper Architecture for<br><span class="highlight">Object Storage Acceleration</span></h1>
+            <p class="tagline">High-performance, S3-compatible caching and write acceleration for cloud object storage</p>
+
+            <img class="hero-image" src="assets/images/ecosystem.jpeg" alt="KyteStore ecosystem: S3 applications, gateway, cache and storage tiers, and public cloud object storage" width="920" height="520" decoding="async">
+            <p class="hero-caption">Ecosystem placement: an S3-compatible front end for your apps, with cached reads and accelerated writes back to remote buckets.</p>
+        </div>
+    </section>
+
+    <section id="features" class="section">
+        <div class="container">
+            <div class="section-title">Core Features</div>
+            <h2>S3-Compatible. Transparent Acceleration.</h2>
+            <p>KyteStore delivers local caching and write acceleration for remote object storage while maintaining full S3 protocol compatibility. No application changes required.</p>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>Protocol Compatible</h3>
+                    <p>Seamlessly works with existing S3-compatible applications. Simply switch the endpoint to KyteStore's S3 gateway address.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Multi-Tier Architecture</h3>
+                    <p>Combines ChunkServer storage layer with caching subsystem for reliable, high-performance read and write acceleration.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Data Reliability</h3>
+                    <p>Unlike simple file caches, KyteStore supports multi-replica, reliable storage with automatic data repair capabilities.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Hot Data Caching</h3>
+                    <p>Intelligent caching of frequently accessed data reduces remote storage bandwidth costs and access latency.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Write Acceleration</h3>
+                    <p>Buffered writes with local persistence enable fast write operations while ensuring data durability.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Horizontal Scaling</h3>
+                    <p>Stateless S3 gateway layer can scale out horizontally to handle increased traffic demands.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="architecture" class="architecture-section">
+        <div class="container">
+            <div class="section-title">System Architecture</div>
+            <h2>Multi-Layer Design for Performance and Reliability</h2>
+            <p>KyteStore separates the stateless S3 gateway, caching tier, replicated chunk storage, and metadata service so each layer can scale and evolve on its own. The diagram below summarizes how requests move through the stack.</p>
+
+            <img class="arch-diagram" src="assets/images/architecture.jpeg" alt="KyteStore architecture diagram: S3 gateway, cache subsystem, ChunkServer, MetaServer, and remote object storage" width="960" height="540" loading="lazy" decoding="async">
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="section-title">Why KyteStore?</div>
+            <h2>Beyond Simple File Caching</h2>
+
+            <div class="comparison">
+                <div class="comparison-box traditional">
+                    <h3>Traditional S3 Accelerators</h3>
+                    <ul>
+                        <li>Simple file-based caching</li>
+                        <li>Performance degrades with large file volumes</li>
+                        <li>No multi-replica support</li>
+                        <li>No automatic data repair</li>
+                        <li>Read acceleration only</li>
+                        <li>Limited reliability guarantees</li>
+                    </ul>
+                </div>
+                <div class="comparison-box kytestore">
+                    <h3>KyteStore</h3>
+                    <ul>
+                        <li>ChunkServer-based multi-tier architecture</li>
+                        <li>Consistent high performance at scale</li>
+                        <li>Multi-replica storage with automatic failover</li>
+                        <li>Reliable local persistence</li>
+                        <li>Full read and write acceleration</li>
+                        <li>Enterprise-grade reliability</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="performance" class="metrics">
+        <div class="container">
+            <div class="section-title">Performance Metrics</div>
+            <h2>Measured Performance</h2>
+            <p>Benchmark results from single-node Docker cluster (1 FE + 2 DataServer) using MinIO warp with S3-compatible interface.</p>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">25K+</div>
+                    <div class="metric-label">GET QPS</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">17K+</div>
+                    <div class="metric-label">PUT QPS</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">570</div>
+                    <div class="metric-label">MiB/s GET</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">5ms</div>
+                    <div class="metric-label">Avg Latency</div>
+                </div>
+            </div>
+
+            <table class="performance-table">
+                <thead>
+                    <tr>
+                        <th>Operation</th>
+                        <th>Concurrency</th>
+                        <th>QPS</th>
+                        <th>Throughput</th>
+                        <th>Avg Latency</th>
+                        <th>P50/P90/P99</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="ops">GET (64KB)</td>
+                        <td>128</td>
+                        <td>25,121</td>
+                        <td>570.07 MiB/s</td>
+                        <td class="latency">5.0 ms</td>
+                        <td class="latency">3.3 / 11.0 / 19.0 ms</td>
+                    </tr>
+                    <tr>
+                        <td class="ops">PUT (64KB)</td>
+                        <td>128</td>
+                        <td>17,195</td>
+                        <td>447.8 MiB/s</td>
+                        <td class="latency">7.9 ms</td>
+                        <td class="latency">4.9 / 19.2 / 26.6 ms</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="contact" class="contact">
+        <div class="container">
+            <div class="section-title">Contact</div>
+            <h2>Get Started with KyteStore</h2>
+            <p>Interested in learning more about KyteStore? Reach out to us for technical discussions, partnerships, or support.</p>
+            <a href="mailto:royaki@vip.qq.com" class="contact-email">royaki@vip.qq.com</a>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 KyteStore. High-Performance Object Storage Acceleration.</p>
+        </div>
+    </footer>
+</body>
+</html>
