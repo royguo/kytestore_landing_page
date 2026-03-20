@@ -108,7 +108,8 @@
 
         .hero-image {
             max-width: 100%;
-            width: min(100%, 920px);
+            width: 100%;
+            max-width: 600px;
             height: auto;
             margin: 48px auto 0;
             display: block;
@@ -204,7 +205,8 @@
 
         .arch-diagram {
             max-width: 100%;
-            width: min(100%, 960px);
+            width: 100%;
+            max-width: 600px;
             height: auto;
             margin: 36px auto 0;
             display: block;
@@ -459,7 +461,7 @@
             <h1>Proper Architecture for<br><span class="highlight">Object Storage Acceleration</span></h1>
             <p class="tagline">High-performance, S3-compatible caching and write acceleration for cloud object storage</p>
 
-            <img class="hero-image" src="assets/images/ecosystem.jpeg" alt="KyteStore ecosystem: S3 applications, gateway, cache and storage tiers, and public cloud object storage" width="920" height="520" decoding="async">
+            <img class="hero-image" src="assets/images/ecosystem.png" alt="KyteStore ecosystem: S3 applications, gateway, cache and storage tiers, and public cloud object storage" decoding="async">
             <p class="hero-caption">Ecosystem placement: an S3-compatible front end for your apps, with cached reads and accelerated writes back to remote buckets.</p>
         </div>
     </section>
@@ -505,7 +507,7 @@
             <h2>Multi-Layer Design for Performance and Reliability</h2>
             <p>KyteStore separates the stateless S3 gateway, caching tier, replicated chunk storage, and metadata service so each layer can scale and evolve on its own. The diagram below summarizes how requests move through the stack.</p>
 
-            <img class="arch-diagram" src="assets/images/architecture.jpeg" alt="KyteStore architecture diagram: S3 gateway, cache subsystem, ChunkServer, MetaServer, and remote object storage" width="960" height="540" loading="lazy" decoding="async">
+            <img class="arch-diagram" src="assets/images/architecture.png" alt="KyteStore architecture diagram: S3 gateway, cache subsystem, ChunkServer, MetaServer, and remote object storage" loading="lazy" decoding="async">
         </div>
     </section>
 
@@ -545,7 +547,7 @@
         <div class="container">
             <div class="section-title">Performance Metrics</div>
             <h2>Measured Performance</h2>
-            <p>Benchmark results from single-node Docker cluster (1 FE + 2 DataServer) using MinIO warp with S3-compatible interface.</p>
+            <p>Benchmark results from single-node Docker cluster (1 FE + 1 DataServer) using MinIO warp with S3-compatible interface.</p>
 
             <div class="metrics-grid">
                 <div class="metric-card">
