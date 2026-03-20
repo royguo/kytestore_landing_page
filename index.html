@@ -104,8 +104,14 @@
             font-size: 20px;
             color: var(--text-secondary);
             font-style: italic;
-            max-width: 640px;
+            max-width: 100%;
             margin: 0 auto 36px;
+        }
+
+        @media (min-width: 960px) {
+            .hero .tagline {
+                white-space: nowrap;
+            }
         }
 
         .hero-image {
@@ -414,6 +420,11 @@
         }
 
         @media (max-width: 768px) {
+            .hero .tagline {
+                white-space: normal;
+                font-size: 18px;
+            }
+
             .hero h1 {
                 font-size: 32px;
                 letter-spacing: 0.04em;
