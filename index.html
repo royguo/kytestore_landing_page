@@ -375,6 +375,77 @@
             font-size: 14px;
         }
 
+        /* Mobile Performance Cards - Hidden by default on desktop */
+        .performance-cards {
+            display: none;
+            margin-top: 36px;
+        }
+
+        .perf-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .perf-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .perf-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
+        }
+
+        .perf-op {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--accent-dim);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .perf-concurrency {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .perf-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .perf-stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .perf-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .perf-value {
+            font-size: 15px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .perf-value.latency {
+            font-family: "Courier New", monospace;
+            font-size: 14px;
+        }
+
         .contact {
             text-align: center;
             padding: 96px 0;
@@ -574,17 +645,17 @@
                 grid-template-columns: 1fr;
             }
 
+            /* Hide table on mobile, show cards */
             .performance-table {
-                display: block;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
+                display: none;
             }
 
-            .performance-table thead,
-            .performance-table tbody,
-            .performance-table th,
-            .performance-table td {
-                white-space: nowrap;
+            .performance-cards {
+                display: block;
+            }
+
+            .perf-stats {
+                grid-template-columns: 1fr 1fr;
             }
         }
     </style>
@@ -720,6 +791,7 @@
                 </div>
             </div>
 
+            <!-- Desktop Table -->
             <table class="performance-table">
                 <thead>
                     <tr>
@@ -750,6 +822,58 @@
                     </tr>
                 </tbody>
             </table>
+
+            <!-- Mobile Cards -->
+            <div class="performance-cards">
+                <div class="perf-card">
+                    <div class="perf-header">
+                        <span class="perf-op">GET (64KB)</span>
+                        <span class="perf-concurrency">128 concurrent</span>
+                    </div>
+                    <div class="perf-stats">
+                        <div class="perf-stat">
+                            <span class="perf-label">QPS</span>
+                            <span class="perf-value">25,121</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label">Throughput</span>
+                            <span class="perf-value">1570.07 MiB/s</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label">Avg Latency</span>
+                            <span class="perf-value latency">3.0 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label">P50/P90/P99</span>
+                            <span class="perf-value latency">1.7/6.0/10.0 ms</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="perf-card">
+                    <div class="perf-header">
+                        <span class="perf-op">PUT (64KB)</span>
+                        <span class="perf-concurrency">128 concurrent</span>
+                    </div>
+                    <div class="perf-stats">
+                        <div class="perf-stat">
+                            <span class="perf-label">QPS</span>
+                            <span class="perf-value">17,195</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label">Throughput</span>
+                            <span class="perf-value">1447.8 MiB/s</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label">Avg Latency</span>
+                            <span class="perf-value latency">4.9 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label">P50/P90/P99</span>
+                            <span class="perf-value latency">2.4/10.2/15.6 ms</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
