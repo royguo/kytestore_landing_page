@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -490,6 +490,25 @@
             font-family: Arial, Helvetica, sans-serif;
         }
 
+        #lang-toggle {
+            background: none;
+            border: 1px solid var(--border-strong);
+            color: var(--text-muted);
+            cursor: pointer;
+            margin-left: 40px;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 4px 10px;
+            transition: color 0.2s, border-color 0.2s;
+            vertical-align: middle;
+        }
+
+        #lang-toggle:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 0 20px;
@@ -508,6 +527,12 @@
             }
 
             nav a {
+                margin-left: 0;
+                font-size: 11px;
+                padding: 6px 10px;
+            }
+
+            #lang-toggle {
                 margin-left: 0;
                 font-size: 11px;
                 padding: 6px 10px;
@@ -666,10 +691,11 @@
             <div class="header-content">
                 <div class="logo">Kyte<span>Store</span></div>
                 <nav>
-                    <a href="#features">Features</a>
-                    <a href="#architecture">Architecture</a>
-                    <a href="#performance">Performance</a>
-                    <a href="#contact">Contact</a>
+                    <a href="#features" data-i18n="nav-features">功能特性</a>
+                    <a href="#architecture" data-i18n="nav-architecture">系统架构</a>
+                    <a href="#performance" data-i18n="nav-performance">性能指标</a>
+                    <a href="#contact" data-i18n="nav-contact">联系我们</a>
+                    <button id="lang-toggle" data-i18n="lang-toggle" onclick="toggleLang()">English</button>
                 </nav>
             </div>
         </div>
@@ -677,47 +703,47 @@
 
     <section class="hero">
         <div class="container">
-            <h1>Practical Architecture for<br><span class="highlight">Object Storage Acceleration</span></h1>
-            <p class="tagline">High-performance, S3-compatible caching and write acceleration for cloud object storage</p>
+            <h1 data-i18n="hero-h1">对象存储加速的<br><span class="highlight">实用架构方案</span></h1>
+            <p class="tagline" data-i18n="hero-tagline">高性能、S3兼容的云对象存储缓存与写入加速方案</p>
 
             <picture>
                 <source srcset="assets/images/ecosystem.webp" type="image/webp">
                 <img class="hero-image" src="assets/images/ecosystem.png" width="1200" height="1363" alt="KyteStore ecosystem: S3 applications, gateway, cache and storage tiers, and public cloud object storage" decoding="async" fetchpriority="high">
             </picture>
-            <p class="hero-caption">Ecosystem placement: an S3-compatible front end for your apps, with cached reads and accelerated writes back to remote buckets.</p>
+            <p class="hero-caption" data-i18n="hero-caption">生态定位：为您的应用提供S3兼容的前端接口，实现读取缓存加速与写入回传加速。</p>
         </div>
     </section>
 
     <section id="features" class="section">
         <div class="container">
-            <div class="section-title">Core Features</div>
-            <h2>S3-Compatible. Transparent Acceleration.</h2>
-            <p>KyteStore delivers local caching and write acceleration for remote object storage while maintaining full S3 protocol compatibility. No application changes required.</p>
+            <div class="section-title" data-i18n="features-label">核心功能</div>
+            <h2 data-i18n="features-h2">S3兼容。透明加速。</h2>
+            <p data-i18n="features-desc">KyteStore在完全兼容S3协议的同时，提供本地缓存与远程对象存储的写入加速，无需修改任何应用代码。</p>
 
             <div class="features-grid">
                 <div class="feature-card">
-                    <h3>Protocol Compatible</h3>
-                    <p>Seamlessly works with existing S3-compatible applications. Simply switch the endpoint to KyteStore's S3 gateway address.</p>
+                    <h3 data-i18n="f1-h3">协议兼容</h3>
+                    <p data-i18n="f1-p">与现有S3兼容应用无缝对接，只需将端点地址切换为KyteStore的S3网关地址即可。</p>
                 </div>
                 <div class="feature-card">
-                    <h3>Multi-Tier Architecture</h3>
-                    <p>Combines ChunkServer storage layer with caching subsystem for reliable, high-performance read and write acceleration.</p>
+                    <h3 data-i18n="f2-h3">多层架构</h3>
+                    <p data-i18n="f2-p">结合ChunkServer存储层与缓存子系统，实现可靠的高性能读写加速。</p>
                 </div>
                 <div class="feature-card">
-                    <h3>Data Reliability</h3>
-                    <p>Unlike simple file caches, KyteStore supports multi-replica, reliable storage with automatic data repair capabilities.</p>
+                    <h3 data-i18n="f3-h3">数据可靠性</h3>
+                    <p data-i18n="f3-p">不同于简单文件缓存，KyteStore支持多副本可靠存储，并具备自动数据修复能力。</p>
                 </div>
                 <div class="feature-card">
-                    <h3>Hot Data Caching</h3>
-                    <p>Intelligent caching of frequently accessed data reduces remote storage bandwidth costs and access latency.</p>
+                    <h3 data-i18n="f4-h3">热数据缓存</h3>
+                    <p data-i18n="f4-p">对频繁访问的数据进行智能缓存，降低远程存储带宽成本与访问延迟。</p>
                 </div>
                 <div class="feature-card">
-                    <h3>Write Acceleration</h3>
-                    <p>Buffered writes with local persistence enable fast write operations while ensuring data durability.</p>
+                    <h3 data-i18n="f5-h3">写入加速</h3>
+                    <p data-i18n="f5-p">通过带本地持久化的缓冲写入，实现快速写操作，同时保障数据持久性。</p>
                 </div>
                 <div class="feature-card">
-                    <h3>Horizontal Scaling</h3>
-                    <p>Stateless S3 gateway layer can scale out horizontally to handle increased traffic demands.</p>
+                    <h3 data-i18n="f6-h3">水平扩展</h3>
+                    <p data-i18n="f6-p">无状态S3网关层可横向扩展，从容应对流量增长。</p>
                 </div>
             </div>
         </div>
@@ -725,9 +751,9 @@
 
     <section id="architecture" class="architecture-section">
         <div class="container">
-            <div class="section-title">System Architecture</div>
-            <h2>Multi-Layer Design for Performance and Reliability</h2>
-            <p>KyteStore separates the stateless S3 gateway, caching tier, replicated chunk storage, and metadata service so each layer can scale and evolve on its own. The diagram below summarizes how requests move through the stack.</p>
+            <div class="section-title" data-i18n="arch-label">系统架构</div>
+            <h2 data-i18n="arch-h2">面向性能与可靠性的多层架构设计</h2>
+            <p data-i18n="arch-p">KyteStore将无状态S3网关、缓存层、多副本块存储与元数据服务分离，使每一层均可独立扩展与演进。下图展示了请求在系统各层间的流转过程。</p>
 
             <img class="arch-diagram" src="assets/images/architecture.png" width="1200" height="1089" alt="KyteStore architecture diagram: S3 gateway, cache subsystem, ChunkServer, MetaServer, and remote object storage" loading="lazy" decoding="async">
         </div>
@@ -735,30 +761,30 @@
 
     <section class="section">
         <div class="container">
-            <div class="section-title">Why KyteStore?</div>
-            <h2>Beyond Simple File Caching</h2>
+            <div class="section-title" data-i18n="why-label">为什么选择KyteStore？</div>
+            <h2 data-i18n="why-h2">超越简单文件缓存</h2>
 
             <div class="comparison">
                 <div class="comparison-box traditional">
-                    <h3>Traditional S3 Accelerators</h3>
+                    <h3 data-i18n="trad-h3">传统S3加速方案</h3>
                     <ul>
-                        <li>Simple file-based caching</li>
-                        <li>Performance degrades with large file volumes</li>
-                        <li>No multi-replica support</li>
-                        <li>No automatic data repair</li>
-                        <li>Read acceleration only</li>
-                        <li>Limited reliability guarantees</li>
+                        <li data-i18n="trad-1">基于文件的简单缓存</li>
+                        <li data-i18n="trad-2">大文件量时性能下降</li>
+                        <li data-i18n="trad-3">不支持多副本</li>
+                        <li data-i18n="trad-4">不支持自动数据修复</li>
+                        <li data-i18n="trad-5">仅支持读加速</li>
+                        <li data-i18n="trad-6">可靠性保障有限</li>
                     </ul>
                 </div>
                 <div class="comparison-box kytestore">
-                    <h3>KyteStore</h3>
+                    <h3 data-i18n="ks-h3">KyteStore</h3>
                     <ul>
-                        <li>ChunkServer-based multi-tier architecture</li>
-                        <li>Consistent high performance at scale</li>
-                        <li>Multi-replica storage with automatic failover</li>
-                        <li>Reliable local persistence</li>
-                        <li>Full read and write acceleration</li>
-                        <li>Enterprise-grade reliability</li>
+                        <li data-i18n="ks-1">基于ChunkServer的多层架构</li>
+                        <li data-i18n="ks-2">大规模下持续高性能</li>
+                        <li data-i18n="ks-3">多副本存储，支持自动故障转移</li>
+                        <li data-i18n="ks-4">可靠的本地持久化</li>
+                        <li data-i18n="ks-5">全面支持读写加速</li>
+                        <li data-i18n="ks-6">企业级可靠性</li>
                     </ul>
                 </div>
             </div>
@@ -767,27 +793,27 @@
 
     <section id="performance" class="metrics">
         <div class="container">
-            <div class="section-title">Performance Metrics</div>
-            <h2>Measured Performance</h2>
-            <p>Benchmark results from single-node Docker cluster (1 FE + 1 DataServer) with a single SSD using MinIO warp with S3-compatible interface.</p>
-            <p>NOTE: The benchmark should be MUCH BETTER in real-world production server with multiple SSDs</p>
+            <div class="section-title" data-i18n="perf-label">性能指标</div>
+            <h2 data-i18n="perf-h2">实测性能数据</h2>
+            <p data-i18n="perf-p1">基准测试环境：单节点Docker集群（1个前端 + 1个数据节点），单块SSD，使用MinIO warp通过S3兼容接口测试。</p>
+            <p data-i18n="perf-p2">注意：在配备多块SSD的真实生产服务器上，实际性能将远优于此基准数据。</p>
 
             <div class="metrics-grid">
                 <div class="metric-card">
                     <div class="metric-value">25K+</div>
-                    <div class="metric-label">GET QPS</div>
+                    <div class="metric-label" data-i18n="m1-label">读取QPS</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-value">17K+</div>
-                    <div class="metric-label">PUT QPS</div>
+                    <div class="metric-label" data-i18n="m2-label">写入QPS</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-value">1570.07</div>
-                    <div class="metric-label">MiB/s GET</div>
+                    <div class="metric-label" data-i18n="m3-label">MiB/s 读取</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-value">3ms</div>
-                    <div class="metric-label">Avg Latency</div>
+                    <div class="metric-label" data-i18n="m4-label">平均延迟</div>
                 </div>
             </div>
 
@@ -795,12 +821,12 @@
             <table class="performance-table">
                 <thead>
                     <tr>
-                        <th>Operation</th>
-                        <th>Concurrency</th>
-                        <th>QPS</th>
-                        <th>Throughput</th>
-                        <th>Avg Latency</th>
-                        <th>P50/P90/P99</th>
+                        <th data-i18n="th-op">操作</th>
+                        <th data-i18n="th-conc">并发数</th>
+                        <th data-i18n="th-qps">QPS</th>
+                        <th data-i18n="th-tp">吞吐量</th>
+                        <th data-i18n="th-lat">平均延迟</th>
+                        <th data-i18n="th-pct">P50/P90/P99</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -828,19 +854,19 @@
                 <div class="perf-card">
                     <div class="perf-header">
                         <span class="perf-op">GET (64KB)</span>
-                        <span class="perf-concurrency">128 concurrent</span>
+                        <span class="perf-concurrency" data-i18n="mob-conc-get">128并发</span>
                     </div>
                     <div class="perf-stats">
                         <div class="perf-stat">
-                            <span class="perf-label">QPS</span>
+                            <span class="perf-label" data-i18n="mob-qps">QPS</span>
                             <span class="perf-value">25,121</span>
                         </div>
                         <div class="perf-stat">
-                            <span class="perf-label">Throughput</span>
+                            <span class="perf-label" data-i18n="mob-tp">吞吐量</span>
                             <span class="perf-value">1570.07 MiB/s</span>
                         </div>
                         <div class="perf-stat">
-                            <span class="perf-label">Avg Latency</span>
+                            <span class="perf-label" data-i18n="mob-lat">平均延迟</span>
                             <span class="perf-value latency">3.0 ms</span>
                         </div>
                         <div class="perf-stat">
@@ -852,19 +878,19 @@
                 <div class="perf-card">
                     <div class="perf-header">
                         <span class="perf-op">PUT (64KB)</span>
-                        <span class="perf-concurrency">128 concurrent</span>
+                        <span class="perf-concurrency" data-i18n="mob-conc-put">128并发</span>
                     </div>
                     <div class="perf-stats">
                         <div class="perf-stat">
-                            <span class="perf-label">QPS</span>
+                            <span class="perf-label" data-i18n="mob-qps">QPS</span>
                             <span class="perf-value">17,195</span>
                         </div>
                         <div class="perf-stat">
-                            <span class="perf-label">Throughput</span>
+                            <span class="perf-label" data-i18n="mob-tp">吞吐量</span>
                             <span class="perf-value">1447.8 MiB/s</span>
                         </div>
                         <div class="perf-stat">
-                            <span class="perf-label">Avg Latency</span>
+                            <span class="perf-label" data-i18n="mob-lat">平均延迟</span>
                             <span class="perf-value latency">4.9 ms</span>
                         </div>
                         <div class="perf-stat">
@@ -879,17 +905,178 @@
 
     <section id="contact" class="contact">
         <div class="container">
-            <div class="section-title">Contact</div>
-            <h2>Get Started with KyteStore</h2>
-            <p>Interested in learning more about KyteStore? Reach out to us for technical discussions, partnerships, or support.</p>
+            <div class="section-title" data-i18n="contact-label">联系我们</div>
+            <h2 data-i18n="contact-h2">开始使用KyteStore</h2>
+            <p data-i18n="contact-p">希望进一步了解KyteStore？欢迎联系我们，进行技术交流、商务合作或获取支持。</p>
             <a href="mailto:service@kytestore.com" class="contact-email">service@kytestore.com</a>
         </div>
     </section>
 
     <footer>
         <div class="container">
-            <p>&copy; 2024 KyteStore. High-Performance Object Storage Acceleration.</p>
+            <p data-i18n="footer-p">&copy; 2024 KyteStore. 高性能对象存储加速。吉至创新科技有限公司。</p>
         </div>
     </footer>
+    <script>
+    (function () {
+        var T = {
+            en: {
+                'nav-features': 'Features',
+                'nav-architecture': 'Architecture',
+                'nav-performance': 'Performance',
+                'nav-contact': 'Contact',
+                'lang-toggle': '中文',
+                'hero-h1': 'Practical Architecture for<br><span class="highlight">Object Storage Acceleration</span>',
+                'hero-tagline': 'High-performance, S3-compatible caching and write acceleration for cloud object storage',
+                'hero-caption': 'Ecosystem placement: an S3-compatible front end for your apps, with cached reads and accelerated writes back to remote buckets.',
+                'features-label': 'Core Features',
+                'features-h2': 'S3-Compatible. Transparent Acceleration.',
+                'features-desc': 'KyteStore delivers local caching and write acceleration for remote object storage while maintaining full S3 protocol compatibility. No application changes required.',
+                'f1-h3': 'Protocol Compatible',
+                'f1-p': 'Seamlessly works with existing S3-compatible applications. Simply switch the endpoint to KyteStore\u2019s S3 gateway address.',
+                'f2-h3': 'Multi-Tier Architecture',
+                'f2-p': 'Combines ChunkServer storage layer with caching subsystem for reliable, high-performance read and write acceleration.',
+                'f3-h3': 'Data Reliability',
+                'f3-p': 'Unlike simple file caches, KyteStore supports multi-replica, reliable storage with automatic data repair capabilities.',
+                'f4-h3': 'Hot Data Caching',
+                'f4-p': 'Intelligent caching of frequently accessed data reduces remote storage bandwidth costs and access latency.',
+                'f5-h3': 'Write Acceleration',
+                'f5-p': 'Buffered writes with local persistence enable fast write operations while ensuring data durability.',
+                'f6-h3': 'Horizontal Scaling',
+                'f6-p': 'Stateless S3 gateway layer can scale out horizontally to handle increased traffic demands.',
+                'arch-label': 'System Architecture',
+                'arch-h2': 'Multi-Layer Design for Performance and Reliability',
+                'arch-p': 'KyteStore separates the stateless S3 gateway, caching tier, replicated chunk storage, and metadata service so each layer can scale and evolve on its own. The diagram below summarizes how requests move through the stack.',
+                'why-label': 'Why KyteStore?',
+                'why-h2': 'Beyond Simple File Caching',
+                'trad-h3': 'Traditional S3 Accelerators',
+                'trad-1': 'Simple file-based caching',
+                'trad-2': 'Performance degrades with large file volumes',
+                'trad-3': 'No multi-replica support',
+                'trad-4': 'No automatic data repair',
+                'trad-5': 'Read acceleration only',
+                'trad-6': 'Limited reliability guarantees',
+                'ks-h3': 'KyteStore',
+                'ks-1': 'ChunkServer-based multi-tier architecture',
+                'ks-2': 'Consistent high performance at scale',
+                'ks-3': 'Multi-replica storage with automatic failover',
+                'ks-4': 'Reliable local persistence',
+                'ks-5': 'Full read and write acceleration',
+                'ks-6': 'Enterprise-grade reliability',
+                'perf-label': 'Performance Metrics',
+                'perf-h2': 'Measured Performance',
+                'perf-p1': 'Benchmark results from single-node Docker cluster (1 FE + 1 DataServer) with a single SSD using MinIO warp with S3-compatible interface.',
+                'perf-p2': 'NOTE: The benchmark should be MUCH BETTER in real-world production server with multiple SSDs',
+                'm1-label': 'GET QPS',
+                'm2-label': 'PUT QPS',
+                'm3-label': 'MiB/s GET',
+                'm4-label': 'Avg Latency',
+                'th-op': 'Operation',
+                'th-conc': 'Concurrency',
+                'th-qps': 'QPS',
+                'th-tp': 'Throughput',
+                'th-lat': 'Avg Latency',
+                'th-pct': 'P50/P90/P99',
+                'mob-conc-get': '128 concurrent',
+                'mob-conc-put': '128 concurrent',
+                'mob-qps': 'QPS',
+                'mob-tp': 'Throughput',
+                'mob-lat': 'Avg Latency',
+                'contact-label': 'Contact',
+                'contact-h2': 'Get Started with KyteStore',
+                'contact-p': 'Interested in learning more about KyteStore? Reach out to us for technical discussions, partnerships, or support.',
+                'footer-p': '&copy; 2024 KyteStore. High-Performance Object Storage Acceleration. JiZhi Innovation Technology Limit.'
+            },
+            zh: {
+                'nav-features': '功能特性',
+                'nav-architecture': '系统架构',
+                'nav-performance': '性能指标',
+                'nav-contact': '联系我们',
+                'lang-toggle': 'English',
+                'hero-h1': '为基于对象存储的大数据系统<br><span class="highlight">提供透明加速</span>',
+                'hero-tagline': '高性能、S3兼容的对象存储【读写】加速方案',
+                'hero-caption': '生态定位：99% 兼容 S3 协议，实现业务无感透明的读加速与写加速。',
+                'features-label': '核心功能',
+                'features-h2': 'S3兼容，透明加速',
+                'features-desc': 'KyteStore 在兼容S3协议的同时，提供本地缓存与远程对象存储的写入加速，无需修改任何应用代码。',
+                'f1-h3': '协议兼容',
+                'f1-p': '与现有 S3 兼容应用无缝对接，只需将接入地址切换为 KyteStore 的网关地址即可。',
+                'f2-h3': '多层架构',
+                'f2-p': '结合 ChunkServer 存储层与 S3 子系统，实现可靠的高性能读写加速。',
+                'f3-h3': '数据可靠性',
+                'f3-p': '不同于简单文件缓存，KyteStore 支持多副本可靠存储，并具备自动数据修复能力。',
+                'f4-h3': '热数据缓存',
+                'f4-p': '对频繁访问的数据进行智能缓存，降低远程存储带宽成本与访问延迟。',
+                'f5-h3': '写入加速',
+                'f5-p': '通过带本地持久化的缓冲写入，实现快速写操作，同时保障数据持久性。',
+                'f6-h3': '水平扩展',
+                'f6-p': '无状态S3网关层可横向扩展，从容应对流量增长。',
+                'arch-label': '系统架构',
+                'arch-h2': '面向性能与可靠性的多层架构设计',
+                'arch-p': 'KyteStore将无状态S3网关、缓存层、多副本块存储与元数据服务分离，使每一层均可独立扩展与演进。下图展示了请求在系统各层间的流转过程。',
+                'why-label': '为什么选择KyteStore？',
+                'why-h2': '超越简单文件缓存',
+                'trad-h3': '传统S3加速方案',
+                'trad-1': '基于文件的简单缓存',
+                'trad-2': '大文件量时性能下降',
+                'trad-3': '不支持多副本',
+                'trad-4': '不支持自动数据修复',
+                'trad-5': '仅支持读加速',
+                'trad-6': '可靠性保障有限',
+                'ks-h3': 'KyteStore',
+                'ks-1': '基于ChunkServer的多层架构',
+                'ks-2': '大规模下持续高性能',
+                'ks-3': '多副本存储，支持自动故障转移',
+                'ks-4': '可靠的本地持久化',
+                'ks-5': '全面支持读写加速',
+                'ks-6': '企业级可靠性',
+                'perf-label': '性能指标',
+                'perf-h2': '实测性能数据',
+                'perf-p1': '基准测试环境：单节点 KyteStore, 单块SSD，使用 MinIO warp 通过 S3 接口测试。',
+                'perf-p2': '注意：在配备多块SSD的真实生产服务器上，实际性能将远优于此基准数据。',
+                'm1-label': '读 QPS',
+                'm2-label': '写 QPS',
+                'm3-label': 'MiB/s',
+                'm4-label': '平均延迟',
+                'th-op': '操作',
+                'th-conc': '并发数',
+                'th-qps': 'QPS',
+                'th-tp': '吞吐量',
+                'th-lat': '平均延迟',
+                'th-pct': 'P50/P90/P99',
+                'mob-conc-get': '128并发',
+                'mob-conc-put': '128并发',
+                'mob-qps': 'QPS',
+                'mob-tp': '吞吐量',
+                'mob-lat': '平均延迟',
+                'contact-label': '联系我们',
+                'contact-h2': '开始使用 KyteStore',
+                'contact-p': '希望进一步了解 KyteStore？欢迎联系我们',
+                'footer-p': '&copy; 2024 KyteStore. 高性能对象存储加速。北京集智创新科技有限公司'
+            }
+        };
+
+        var lang = localStorage.getItem('ks-lang') || 'zh';
+
+        function applyLang(l) {
+            var t = T[l];
+            document.querySelectorAll('[data-i18n]').forEach(function (el) {
+                var key = el.getAttribute('data-i18n');
+                if (t[key] !== undefined) {
+                    el.innerHTML = t[key];
+                }
+            });
+            document.documentElement.setAttribute('lang', l === 'zh' ? 'zh-CN' : 'en');
+        }
+
+        window.toggleLang = function () {
+            lang = lang === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('ks-lang', lang);
+            applyLang(lang);
+        };
+
+        applyLang(lang);
+    }());
+    </script>
 </body>
 </html>
