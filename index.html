@@ -302,6 +302,26 @@
             max-width: 700px;
         }
 
+        .performance-subsection {
+            margin-top: 48px;
+        }
+
+        .performance-subsection h3 {
+            font-size: 22px;
+            font-weight: normal;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        .performance-subsection p {
+            margin: 0;
+            max-width: 760px;
+        }
+
+        .performance-cards + .performance-subsection {
+            margin-top: 56px;
+        }
+
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -611,6 +631,14 @@
                 margin-top: 36px;
             }
 
+            .performance-subsection {
+                margin-top: 40px;
+            }
+
+            .performance-subsection h3 {
+                font-size: 20px;
+            }
+
             .metric-card {
                 padding: 20px;
             }
@@ -664,6 +692,10 @@
             .section h2,
             .architecture-section h2 {
                 font-size: 22px;
+            }
+
+            .performance-subsection h3 {
+                font-size: 18px;
             }
 
             .metrics-grid {
@@ -798,6 +830,11 @@
             <p data-i18n="perf-p1">基准测试环境：单节点Docker集群（1个前端 + 1个数据节点），单块SSD，使用MinIO warp通过S3兼容接口测试。</p>
             <p data-i18n="perf-p2">注意：在配备多块SSD的真实生产服务器上，实际性能将远优于此基准数据。</p>
 
+            <div class="performance-subsection">
+                <h3 data-i18n="perf-throughput-h3">1）基础吞吐性能</h3>
+                <p data-i18n="perf-throughput-p">128 并发压测下的基础吞吐表现，体现持续读写带宽能力。</p>
+            </div>
+
             <div class="metrics-grid">
                 <div class="metric-card">
                     <div class="metric-value">25K+</div>
@@ -900,6 +937,173 @@
                     </div>
                 </div>
             </div>
+
+            <div class="performance-subsection">
+                <h3 data-i18n="perf-latency-h3">2）基础延迟性能</h3>
+                <p data-i18n="perf-latency-p">单路请求下的基础延迟数据，体现低延迟响应能力。</p>
+            </div>
+
+            <table class="performance-table">
+                <thead>
+                    <tr>
+                        <th data-i18n="th-op">操作</th>
+                        <th data-i18n="th-lat">平均延迟</th>
+                        <th data-i18n="th-p50">P50</th>
+                        <th data-i18n="th-p90">P90</th>
+                        <th data-i18n="th-p99">P99</th>
+                        <th data-i18n="th-objrate">对象速率</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="ops">PUT 64KiB</td>
+                        <td class="latency">1.00 ms</td>
+                        <td class="latency">0.90 ms</td>
+                        <td class="latency">1.30 ms</td>
+                        <td class="latency">1.70 ms</td>
+                        <td>986.45 obj/s</td>
+                    </tr>
+                    <tr>
+                        <td class="ops">GET 64KiB range</td>
+                        <td class="latency">0.50 ms</td>
+                        <td class="latency">0.50 ms</td>
+                        <td class="latency">0.70 ms</td>
+                        <td class="latency">1.00 ms</td>
+                        <td>1920.67 obj/s</td>
+                    </tr>
+                    <tr>
+                        <td class="ops">HEAD</td>
+                        <td class="latency">0.30 ms</td>
+                        <td class="latency">0.30 ms</td>
+                        <td class="latency">0.50 ms</td>
+                        <td class="latency">0.60 ms</td>
+                        <td>43979.64 obj/s</td>
+                    </tr>
+                    <tr>
+                        <td class="ops">LIST</td>
+                        <td class="latency">68.70 ms</td>
+                        <td class="latency">68.40 ms</td>
+                        <td class="latency">72.20 ms</td>
+                        <td class="latency">82.30 ms</td>
+                        <td>146256.01 obj/s</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="performance-cards">
+                <div class="perf-card">
+                    <div class="perf-header">
+                        <span class="perf-op">PUT 64KiB</span>
+                        <span class="perf-concurrency" data-i18n="mob-single-stream">单路请求</span>
+                    </div>
+                    <div class="perf-stats">
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="mob-lat">平均延迟</span>
+                            <span class="perf-value latency">1.00 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="th-p50">P50</span>
+                            <span class="perf-value latency">0.90 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="th-p90">P90</span>
+                            <span class="perf-value latency">1.30 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="th-p99">P99</span>
+                            <span class="perf-value latency">1.70 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="mob-objrate">对象速率</span>
+                            <span class="perf-value">986.45 obj/s</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="perf-card">
+                    <div class="perf-header">
+                        <span class="perf-op">GET 64KiB range</span>
+                        <span class="perf-concurrency" data-i18n="mob-single-stream">单路请求</span>
+                    </div>
+                    <div class="perf-stats">
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="mob-lat">平均延迟</span>
+                            <span class="perf-value latency">0.50 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="th-p50">P50</span>
+                            <span class="perf-value latency">0.50 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="th-p90">P90</span>
+                            <span class="perf-value latency">0.70 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="th-p99">P99</span>
+                            <span class="perf-value latency">1.00 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="mob-objrate">对象速率</span>
+                            <span class="perf-value">1920.67 obj/s</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="perf-card">
+                    <div class="perf-header">
+                        <span class="perf-op">HEAD</span>
+                        <span class="perf-concurrency" data-i18n="mob-single-stream">单路请求</span>
+                    </div>
+                    <div class="perf-stats">
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="mob-lat">平均延迟</span>
+                            <span class="perf-value latency">0.30 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="th-p50">P50</span>
+                            <span class="perf-value latency">0.30 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="th-p90">P90</span>
+                            <span class="perf-value latency">0.50 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="th-p99">P99</span>
+                            <span class="perf-value latency">0.60 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="mob-objrate">对象速率</span>
+                            <span class="perf-value">43979.64 obj/s</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="perf-card">
+                    <div class="perf-header">
+                        <span class="perf-op">LIST</span>
+                        <span class="perf-concurrency" data-i18n="mob-single-stream">单路请求</span>
+                    </div>
+                    <div class="perf-stats">
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="mob-lat">平均延迟</span>
+                            <span class="perf-value latency">68.70 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="th-p50">P50</span>
+                            <span class="perf-value latency">68.40 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="th-p90">P90</span>
+                            <span class="perf-value latency">72.20 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="th-p99">P99</span>
+                            <span class="perf-value latency">82.30 ms</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="perf-label" data-i18n="mob-objrate">对象速率</span>
+                            <span class="perf-value">146256.01 obj/s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -967,6 +1171,10 @@
                 'perf-h2': 'Measured Performance',
                 'perf-p1': 'Benchmark results from single-node Docker cluster (1 FE + 1 DataServer) with a single SSD using MinIO warp with S3-compatible interface.',
                 'perf-p2': 'NOTE: The benchmark should be MUCH BETTER in real-world production server with multiple SSDs',
+                'perf-throughput-h3': '1) Baseline Throughput',
+                'perf-throughput-p': 'Baseline throughput under 128 concurrent requests, highlighting sustained read and write bandwidth.',
+                'perf-latency-h3': '2) Baseline Latency',
+                'perf-latency-p': 'Single-stream latency measurements that highlight low-latency response capability.',
                 'm1-label': 'GET QPS',
                 'm2-label': 'PUT QPS',
                 'm3-label': 'MiB/s GET',
@@ -977,11 +1185,17 @@
                 'th-tp': 'Throughput',
                 'th-lat': 'Avg Latency',
                 'th-pct': 'P50/P90/P99',
+                'th-p50': 'P50',
+                'th-p90': 'P90',
+                'th-p99': 'P99',
+                'th-objrate': 'Object Rate',
                 'mob-conc-get': '128 concurrent',
                 'mob-conc-put': '128 concurrent',
+                'mob-single-stream': 'Single stream',
                 'mob-qps': 'QPS',
                 'mob-tp': 'Throughput',
                 'mob-lat': 'Avg Latency',
+                'mob-objrate': 'Object Rate',
                 'contact-label': 'Contact',
                 'contact-h2': 'Get Started with KyteStore',
                 'contact-p': 'Interested in learning more about KyteStore? Reach out to us for technical discussions, partnerships, or support.',
@@ -1034,6 +1248,10 @@
                 'perf-h2': '实测性能数据',
                 'perf-p1': '基准测试环境：单节点 KyteStore, 单块SSD，使用 MinIO warp 通过 S3 接口测试。',
                 'perf-p2': '注意：在配备多块SSD的真实生产服务器上，实际性能将远优于此基准数据。',
+                'perf-throughput-h3': '1）基础吞吐性能',
+                'perf-throughput-p': '128 并发压测下的基础吞吐表现，体现持续读写带宽能力。',
+                'perf-latency-h3': '2）基础延迟性能',
+                'perf-latency-p': '单路请求下的基础延迟数据，体现低延迟响应能力。',
                 'm1-label': '读 QPS',
                 'm2-label': '写 QPS',
                 'm3-label': 'MiB/s',
@@ -1044,11 +1262,17 @@
                 'th-tp': '吞吐量',
                 'th-lat': '平均延迟',
                 'th-pct': 'P50/P90/P99',
+                'th-p50': 'P50',
+                'th-p90': 'P90',
+                'th-p99': 'P99',
+                'th-objrate': '对象速率',
                 'mob-conc-get': '128并发',
                 'mob-conc-put': '128并发',
+                'mob-single-stream': '单路请求',
                 'mob-qps': 'QPS',
                 'mob-tp': '吞吐量',
                 'mob-lat': '平均延迟',
+                'mob-objrate': '对象速率',
                 'contact-label': '联系我们',
                 'contact-h2': '开始使用 KyteStore',
                 'contact-p': '希望进一步了解 KyteStore？欢迎联系我们',
