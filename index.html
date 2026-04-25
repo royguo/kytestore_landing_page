@@ -1234,13 +1234,13 @@
 
             <div class="performance-subsection">
                 <h3 data-i18n="perf-duckdb-h3">3）DuckDB TPC-DS 测试</h3>
-                <p data-i18n="perf-duckdb-p">KyteStore 单机最小规模部署</p>
+                <p data-i18n="perf-duckdb-p">KyteStore 单机最小规模部署, 同时 TPCDS 测试是逐个 SQL 顺序执行，SQL 内部允许并行处理</p>
                 <table class="performance-table">
                     <thead>
                         <tr>
                             <th data-i18n="tpcds-solution">方案</th>
                             <th data-i18n="tpcds-data">总数据量</th>
-                            <th data-i18n="tpcds-threads">线程数</th>
+                            <th data-i18n="tpcds-threads">算子并行数</th>
                             <th data-i18n="tpcds-queries">Query 数量</th>
                             <th data-i18n="tpcds-total">总耗时</th>
                             <th data-i18n="tpcds-avg">单 Query 平均耗时</th>
@@ -1447,10 +1447,10 @@
                 'perf-latency-h3': '2) Baseline Latency',
                 'perf-latency-p': 'Single-stream latency measurements that highlight low-latency response capability.',
                 'perf-duckdb-h3': '3) DuckDB TPC-DS Benchmark',
-                'perf-duckdb-p': 'KyteStore single-node minimum deployment',
+                'perf-duckdb-p': 'KyteStore single-node minimum deployment. TPC-DS queries are executed sequentially, with parallelism within each SQL.',
                 'tpcds-solution': 'Solution',
                 'tpcds-data': 'Total Data',
-                'tpcds-threads': 'Threads',
+                'tpcds-threads': 'Operator Parallelism',
                 'tpcds-queries': 'Queries',
                 'tpcds-total': 'Total Time',
                 'tpcds-avg': 'Avg Query Time',
@@ -1571,10 +1571,10 @@
                 'perf-latency-h3': '2）基础延迟性能',
                 'perf-latency-p': '单路请求下的基础延迟数据，体现低延迟响应能力。',
                 'perf-duckdb-h3': '3）DuckDB TPC-DS 测试',
-                'perf-duckdb-p': 'KyteStore 单机最小规模部署',
+                'perf-duckdb-p': 'KyteStore 单机最小规模部署, 同时 TPCDS 测试是逐个 SQL 顺序执行，SQL 内部允许并行处理',
                 'tpcds-solution': '方案',
                 'tpcds-data': '总数据量',
-                'tpcds-threads': '线程数',
+                'tpcds-threads': '算子并行数',
                 'tpcds-queries': 'Query 数量',
                 'tpcds-total': '总耗时',
                 'tpcds-avg': '单 Query 平均耗时',
