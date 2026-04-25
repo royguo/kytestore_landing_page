@@ -1231,6 +1231,45 @@
                     </div>
                 </div>
             </div>
+
+            <div class="performance-subsection">
+                <h3 data-i18n="perf-duckdb-h3">3）DuckDB TPC-DS 测试</h3>
+                <p data-i18n="perf-duckdb-p">KyteStore 单机最小规模部署</p>
+                <table class="performance-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="col-tier">档位</th>
+                            <th data-i18n="col-topology">典型拓扑</th>
+                            <th data-i18n="col-fe-spec">FE 节点规格</th>
+                            <th data-i18n="col-ds-spec">DS 节点规格</th>
+                            <th data-i18n="col-net">网络</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td data-i18n="tier-min">最低配置</td>
+                            <td data-i18n="cluster-min-topo">1 FE + 2 DS + 1 控制面</td>
+                            <td>4 vCPU / 8 GiB / 100 GB SSD</td>
+                            <td>8 vCPU / 32 GiB / 1 TB SSD</td>
+                            <td>10 Gbps</td>
+                        </tr>
+                        <tr>
+                            <td data-i18n="tier-rec">推荐配置</td>
+                            <td data-i18n="cluster-rec-topo">2 FE + 3 DS + 3 控制面</td>
+                            <td>8 vCPU / 16 GiB / 100 GB SSD</td>
+                            <td>16 vCPU / 64 GiB / 2 TB NVMe</td>
+                            <td>10-25 Gbps</td>
+                        </tr>
+                        <tr>
+                            <td data-i18n="tier-perf">性能配置</td>
+                            <td data-i18n="cluster-perf-topo">2-4 FE + 6+ DS + 3 控制面</td>
+                            <td>16 vCPU / 32 GiB / 200 GB SSD</td>
+                            <td>32 vCPU / 128 GiB / 4+ TB NVMe</td>
+                            <td>25 Gbps+</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
 
@@ -1405,6 +1444,8 @@
                 'perf-throughput-p': 'Baseline throughput under 128 concurrent requests, highlighting sustained read and write bandwidth.',
                 'perf-latency-h3': '2) Baseline Latency',
                 'perf-latency-p': 'Single-stream latency measurements that highlight low-latency response capability.',
+                'perf-duckdb-h3': '3) DuckDB TPC-DS Benchmark',
+                'perf-duckdb-p': 'KyteStore single-node minimum deployment',
                 'm1-label': 'GET QPS',
                 'm2-label': 'PUT QPS',
                 'm3-label': 'MiB/s GET',
@@ -1517,6 +1558,8 @@
                 'perf-throughput-p': '128 并发压测下的基础吞吐表现，体现持续读写带宽能力。',
                 'perf-latency-h3': '2）基础延迟性能',
                 'perf-latency-p': '单路请求下的基础延迟数据，体现低延迟响应能力。',
+                'perf-duckdb-h3': '3）DuckDB TPC-DS 测试',
+                'perf-duckdb-p': 'KyteStore 单机最小规模部署',
                 'm1-label': '读 QPS',
                 'm2-label': '写 QPS',
                 'm3-label': 'MiB/s',
