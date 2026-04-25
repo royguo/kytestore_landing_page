@@ -1,11 +1,3 @@
-*.pid
-server.log
-.stop_marker
-__pycache__/
-*.pyc
-.Python
-
-# Local Caddy artifacts (use system package / official install)
-/caddy
-caddy.tar.gz
-caddy.log
+node_modules/
+dist/
+.wrangler/

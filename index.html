@@ -466,6 +466,132 @@
             font-size: 14px;
         }
 
+        /* Config / Deployment Section */
+        .config-section {
+            padding: 80px 0;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+
+        .config-section .section-title {
+            margin-bottom: 28px;
+        }
+
+        .config-section h2 {
+            font-size: 38px;
+            font-weight: normal;
+            margin-bottom: 12px;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .config-section h3 {
+            font-size: 22px;
+            font-weight: normal;
+            margin-bottom: 20px;
+            color: var(--text-secondary);
+        }
+
+        .config-section > .container > p {
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin-bottom: 20px;
+        }
+
+        .config-subsection {
+            margin-top: 48px;
+        }
+
+        .config-subsection h4 {
+            font-size: 18px;
+            font-weight: normal;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .config-subsection > p {
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin-bottom: 16px;
+            font-size: 15px;
+        }
+
+        .config-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0 24px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+        }
+
+        .config-table th,
+        .config-table td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .config-table th {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg-tertiary);
+        }
+
+        .config-table td {
+            color: var(--text-secondary);
+        }
+
+        .config-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .config-notes {
+            list-style: disc;
+            padding-left: 1.5em;
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 12px;
+        }
+
+        .config-notes li {
+            margin-bottom: 6px;
+        }
+
+        @media (max-width: 768px) {
+            .config-section {
+                padding: 56px 0;
+            }
+
+            .config-section h2 {
+                font-size: 26px;
+            }
+
+            .config-section h3 {
+                font-size: 20px;
+            }
+
+            .config-subsection h4 {
+                font-size: 16px;
+            }
+
+            .config-table th,
+            .config-table td {
+                padding: 10px 8px;
+                font-size: 12px;
+            }
+
+            .config-table th {
+                font-size: 9px;
+                letter-spacing: 0.05em;
+            }
+        }
+
         .contact {
             text-align: center;
             padding: 96px 0;
@@ -726,6 +852,7 @@
                     <a href="#features" data-i18n="nav-features">功能特性</a>
                     <a href="#architecture" data-i18n="nav-architecture">系统架构</a>
                     <a href="#performance" data-i18n="nav-performance">性能指标</a>
+                    <a href="#deployment" data-i18n="nav-deployment">推荐配置</a>
                     <a href="#contact" data-i18n="nav-contact">联系我们</a>
                     <button id="lang-toggle" data-i18n="lang-toggle" onclick="toggleLang()">English</button>
                 </nav>
@@ -1107,6 +1234,116 @@
         </div>
     </section>
 
+    <section id="deployment" class="config-section">
+        <div class="container">
+            <div class="section-title" data-i18n="deploy-label">部署建议</div>
+            <h2 data-i18n="deploy-h2">部署建议</h2>
+            <h3 data-i18n="deploy-h3">推荐配置</h3>
+            <p data-i18n="deploy-desc">以下配置建议覆盖单机验证与正式集群部署，便于按业务规模规划 KyteStore 的资源。</p>
+
+            <div class="config-subsection">
+                <h4 data-i18n="deploy-single-title">单机部署配置建议</h4>
+                <p data-i18n="deploy-single-desc">适用于 FE + DS + MS + FDB 全部部署在同一台服务器上的场景。</p>
+                <table class="config-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="col-tier">档位</th>
+                            <th>CPU</th>
+                            <th data-i18n="col-mem">内存</th>
+                            <th>SSD</th>
+                            <th data-i18n="col-net">网络</th>
+                            <th data-i18n="col-scenario">适用场景</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td data-i18n="tier-min">最低配置</td>
+                            <td>8 vCPU</td>
+                            <td>32 GiB</td>
+                            <td>500 GB SSD</td>
+                            <td>1 Gbps</td>
+                            <td data-i18n="single-min-scenario">功能验证、开发测试、低并发 PoC</td>
+                        </tr>
+                        <tr>
+                            <td data-i18n="tier-rec">推荐配置</td>
+                            <td>16 vCPU</td>
+                            <td>64 GiB</td>
+                            <td>1 TB NVMe</td>
+                            <td>10 Gbps</td>
+                            <td data-i18n="single-rec-scenario">小规模正式使用、稳定读写加速</td>
+                        </tr>
+                        <tr>
+                            <td data-i18n="tier-perf">性能配置</td>
+                            <td>32 vCPU</td>
+                            <td>128 GiB</td>
+                            <td>2-4 TB NVMe</td>
+                            <td>25 Gbps</td>
+                            <td data-i18n="single-perf-scenario">更高并发、较大缓存、持续写入场景</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <ul class="config-notes">
+                    <li data-i18n="single-note1">单机版适合验证功能、跑小规模业务，不适合作为高可用生产架构。</li>
+                    <li data-i18n="single-note2">DS 是资源消耗最大的角色，CPU、内存和本地盘性能最关键。</li>
+                    <li data-i18n="single-note3">如果开启写缓冲和异步回刷，网络带宽也会直接影响整体吞吐。</li>
+                </ul>
+            </div>
+
+            <div class="config-subsection">
+                <h4 data-i18n="deploy-cluster-title">集群部署配置建议</h4>
+                <p data-i18n="deploy-cluster-desc">适用于多节点正式部署，建议将数据面和控制面分开规划。</p>
+                <table class="config-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="col-tier">档位</th>
+                            <th data-i18n="col-topology">典型拓扑</th>
+                            <th data-i18n="col-fe-spec">FE 节点规格</th>
+                            <th data-i18n="col-ds-spec">DS 节点规格</th>
+                            <th data-i18n="col-ctrl-spec">控制面节点规格</th>
+                            <th data-i18n="col-net">网络</th>
+                            <th data-i18n="col-scenario">适用场景</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td data-i18n="tier-min">最低配置</td>
+                            <td data-i18n="cluster-min-topo">1 FE + 2 DS + 1 控制面</td>
+                            <td>4 vCPU / 8 GiB / 100 GB SSD</td>
+                            <td>8 vCPU / 32 GiB / 1 TB SSD</td>
+                            <td>4 vCPU / 16 GiB / 200 GB SSD</td>
+                            <td>10 Gbps</td>
+                            <td data-i18n="cluster-min-scenario">小规模集群、内测环境、非高可用上线</td>
+                        </tr>
+                        <tr>
+                            <td data-i18n="tier-rec">推荐配置</td>
+                            <td data-i18n="cluster-rec-topo">2 FE + 3 DS + 3 控制面</td>
+                            <td>8 vCPU / 16 GiB / 100 GB SSD</td>
+                            <td>16 vCPU / 64 GiB / 2 TB NVMe</td>
+                            <td>8 vCPU / 32 GiB / 500 GB SSD</td>
+                            <td>10-25 Gbps</td>
+                            <td data-i18n="cluster-rec-scenario">常规生产环境、稳定读写加速</td>
+                        </tr>
+                        <tr>
+                            <td data-i18n="tier-perf">性能配置</td>
+                            <td data-i18n="cluster-perf-topo">2-4 FE + 6+ DS + 3 控制面</td>
+                            <td>16 vCPU / 32 GiB / 200 GB SSD</td>
+                            <td>32 vCPU / 128 GiB / 4+ TB NVMe</td>
+                            <td>8-16 vCPU / 32-64 GiB / 500 GB SSD</td>
+                            <td>25 Gbps+</td>
+                            <td data-i18n="cluster-perf-scenario">高并发、大缓存、持续写入和热点读取</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <ul class="config-notes">
+                    <li data-i18n="cluster-note1">集群版更适合正式生产，尤其是在需要稳定吞吐和更好扩展能力时。</li>
+                    <li data-i18n="cluster-note2">FE 主要承担网关和协议处理，DS 负责本地缓存和写缓冲，因此 DS 节点应优先使用 NVMe。</li>
+                    <li data-i18n="cluster-note3">控制面建议至少准备 3 个 FDB coordinator；MS 可以与其中一台控制面节点同机部署。</li>
+                    <li data-i18n="cluster-note4">如果业务以写入加速为主，优先增加 DS 节点数量和本地盘容量；如果业务以接入和转发为主，再增加 FE 节点。</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
     <section id="contact" class="contact">
         <div class="container">
             <div class="section-title" data-i18n="contact-label">联系我们</div>
@@ -1128,6 +1365,7 @@
                 'nav-features': 'Features',
                 'nav-architecture': 'Architecture',
                 'nav-performance': 'Performance',
+                'nav-deployment': 'Deployment',
                 'nav-contact': 'Contact',
                 'lang-toggle': '中文',
                 'hero-h1': 'Practical Architecture for<br><span class="highlight">Object Storage Acceleration</span>',
@@ -1196,6 +1434,41 @@
                 'mob-tp': 'Throughput',
                 'mob-lat': 'Avg Latency',
                 'mob-objrate': 'Object Rate',
+                'deploy-label': 'Deployment',
+                'deploy-h2': 'Deployment Guide',
+                'deploy-h3': 'Recommended Configurations',
+                'deploy-desc': 'The following configuration recommendations cover single-node validation and production cluster deployment, helping you plan KyteStore resources according to your business scale.',
+                'deploy-single-title': 'Single-Node Deployment',
+                'deploy-single-desc': 'For scenarios where FE + DS + MS + FDB are all deployed on the same server.',
+                'col-tier': 'Tier',
+                'col-mem': 'Memory',
+                'col-net': 'Network',
+                'col-scenario': 'Use Case',
+                'tier-min': 'Minimum',
+                'tier-rec': 'Recommended',
+                'tier-perf': 'Performance',
+                'single-min-scenario': 'Feature validation, dev/test, low-concurrency PoC',
+                'single-rec-scenario': 'Small-scale production, stable read/write acceleration',
+                'single-perf-scenario': 'Higher concurrency, larger cache, sustained writes',
+                'single-note1': 'Single-node is suitable for feature validation and small-scale workloads, not for high-availability production.',
+                'single-note2': 'DS is the most resource-intensive role; CPU, memory, and local disk performance are critical.',
+                'single-note3': 'With write buffering and async flush enabled, network bandwidth directly affects overall throughput.',
+                'deploy-cluster-title': 'Cluster Deployment',
+                'deploy-cluster-desc': 'For multi-node production deployment, separate the data plane and control plane.',
+                'col-topology': 'Topology',
+                'col-fe-spec': 'FE Node Spec',
+                'col-ds-spec': 'DS Node Spec',
+                'col-ctrl-spec': 'Control Plane Node Spec',
+                'cluster-min-topo': '1 FE + 2 DS + 1 Control Plane',
+                'cluster-min-scenario': 'Small cluster, internal testing, non-HA deployment',
+                'cluster-rec-topo': '2 FE + 3 DS + 3 Control Plane',
+                'cluster-rec-scenario': 'Standard production, stable read/write acceleration',
+                'cluster-perf-topo': '2-4 FE + 6+ DS + 3 Control Plane',
+                'cluster-perf-scenario': 'High concurrency, large cache, sustained writes and hot reads',
+                'cluster-note1': 'Cluster deployment is better for production, especially when stable throughput and scalability are needed.',
+                'cluster-note2': 'FE handles gateway and protocol processing; DS handles local caching and write buffering, so DS nodes should prioritize NVMe.',
+                'cluster-note3': 'The control plane should have at least 3 FDB coordinators; MS can be co-located with one control plane node.',
+                'cluster-note4': 'For write-heavy workloads, prioritize adding DS nodes and local disk capacity; for ingress/forwarding workloads, add FE nodes.',
                 'contact-label': 'Contact',
                 'contact-h2': 'Get Started with KyteStore',
                 'contact-p': 'Interested in learning more about KyteStore? Reach out to us for technical discussions, partnerships, or support.',
@@ -1205,6 +1478,7 @@
                 'nav-features': '功能特性',
                 'nav-architecture': '系统架构',
                 'nav-performance': '性能指标',
+                'nav-deployment': '推荐配置',
                 'nav-contact': '联系我们',
                 'lang-toggle': 'English',
                 'hero-h1': '为基于对象存储的大数据系统<br><span class="highlight">提供透明加速</span>',
@@ -1273,6 +1547,41 @@
                 'mob-tp': '吞吐量',
                 'mob-lat': '平均延迟',
                 'mob-objrate': '对象速率',
+                'deploy-label': '部署建议',
+                'deploy-h2': '部署建议',
+                'deploy-h3': '推荐配置',
+                'deploy-desc': '以下配置建议覆盖单机验证与正式集群部署，便于按业务规模规划 KyteStore 的资源。',
+                'deploy-single-title': '单机部署配置建议',
+                'deploy-single-desc': '适用于 FE + DS + MS + FDB 全部部署在同一台服务器上的场景。',
+                'col-tier': '档位',
+                'col-mem': '内存',
+                'col-net': '网络',
+                'col-scenario': '适用场景',
+                'tier-min': '最低配置',
+                'tier-rec': '推荐配置',
+                'tier-perf': '性能配置',
+                'single-min-scenario': '功能验证、开发测试、低并发 PoC',
+                'single-rec-scenario': '小规模正式使用、稳定读写加速',
+                'single-perf-scenario': '更高并发、较大缓存、持续写入场景',
+                'single-note1': '单机版适合验证功能、跑小规模业务，不适合作为高可用生产架构。',
+                'single-note2': 'DS 是资源消耗最大的角色，CPU、内存和本地盘性能最关键。',
+                'single-note3': '如果开启写缓冲和异步回刷，网络带宽也会直接影响整体吞吐。',
+                'deploy-cluster-title': '集群部署配置建议',
+                'deploy-cluster-desc': '适用于多节点正式部署，建议将数据面和控制面分开规划。',
+                'col-topology': '典型拓扑',
+                'col-fe-spec': 'FE 节点规格',
+                'col-ds-spec': 'DS 节点规格',
+                'col-ctrl-spec': '控制面节点规格',
+                'cluster-min-topo': '1 FE + 2 DS + 1 控制面',
+                'cluster-min-scenario': '小规模集群、内测环境、非高可用上线',
+                'cluster-rec-topo': '2 FE + 3 DS + 3 控制面',
+                'cluster-rec-scenario': '常规生产环境、稳定读写加速',
+                'cluster-perf-topo': '2-4 FE + 6+ DS + 3 控制面',
+                'cluster-perf-scenario': '高并发、大缓存、持续写入和热点读取',
+                'cluster-note1': '集群版更适合正式生产，尤其是在需要稳定吞吐和更好扩展能力时。',
+                'cluster-note2': 'FE 主要承担网关和协议处理，DS 负责本地缓存和写缓冲，因此 DS 节点应优先使用 NVMe。',
+                'cluster-note3': '控制面建议至少准备 3 个 FDB coordinator；MS 可以与其中一台控制面节点同机部署。',
+                'cluster-note4': '如果业务以写入加速为主，优先增加 DS 节点数量和本地盘容量；如果业务以接入和转发为主，再增加 FE 节点。',
                 'contact-label': '联系我们',
                 'contact-h2': '开始使用 KyteStore',
                 'contact-p': '希望进一步了解 KyteStore？欢迎联系我们',
