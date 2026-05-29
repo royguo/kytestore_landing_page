@@ -100,20 +100,6 @@
             color: var(--accent);
         }
 
-        .hero .tagline {
-            font-size: 20px;
-            color: var(--text-secondary);
-            font-style: italic;
-            max-width: 100%;
-            margin: 0 auto 36px;
-        }
-
-        @media (min-width: 960px) {
-            .hero .tagline {
-                white-space: nowrap;
-            }
-        }
-
         .hero-image {
             max-width: 100%;
             width: 100%;
@@ -128,7 +114,7 @@
         .hero-actions {
             display: flex;
             justify-content: center;
-            margin: 0 0 28px;
+            margin: 28px 0 0;
         }
 
         .hero-action {
@@ -593,13 +579,6 @@
                 display: block;
             }
 
-            .hero .tagline {
-                white-space: normal;
-                font-size: 16px;
-                padding: 0 10px;
-                overflow-wrap: anywhere;
-            }
-
             .hero-image {
                 max-width: 100%;
                 margin-top: 0;
@@ -713,13 +692,11 @@
 
     <section class="hero">
         <div class="container">
-            <h1 data-i18n="hero-h1">湖仓系统 和 AI 训推<span class="highlight">透明加速存储底座</span></h1>
-            <p class="tagline" data-i18n="hero-tagline">S3 兼容对象协议、POSIX 文件语义与远程对象存储加速统一在同一套 ChunkServer 底座上。</p>
-
+            <h1 data-i18n="hero-h1">湖仓系统 和 AI 训推<br><span class="highlight">透明加速存储底座</span></h1>
+            <img class="hero-image" src="assets/images/ecosystem.jpg" width="1254" height="1254" alt="KyteStore ecosystem: lakehouse systems use S3 access, AI systems use POSIX access, and both share a unified ChunkServer with object storage backing" decoding="async" fetchpriority="high">
             <div class="hero-actions">
                 <a class="hero-action" href="whitepaper.html" target="_blank" rel="noopener" data-i18n="whitepaper-button">技术白皮书</a>
             </div>
-            <img class="hero-image" src="assets/images/ecosystem.jpg" width="1254" height="1254" alt="KyteStore ecosystem: lakehouse systems use S3 access, AI systems use POSIX access, and both share a unified ChunkServer with object storage backing" decoding="async" fetchpriority="high">
         </div>
     </section>
 
@@ -1090,7 +1067,6 @@
                 'nav-contact': 'Contact',
                 'lang-toggle': '中文',
                 'hero-h1': 'One data foundation for<br><span class="highlight">S3 and POSIX access</span>',
-                'hero-tagline': 'A unified ChunkServer foundation for S3-compatible object protocols, POSIX file semantics, and remote object storage acceleration.',
                 'whitepaper-button': 'Technical Whitepaper',
                 'features-label': 'Core Features',
                 'features-h2': 'From a Unified Data Foundation to Multi-Protocol Access',
@@ -1236,8 +1212,7 @@
                 'nav-deployment': '推荐配置',
                 'nav-contact': '联系我们',
                 'lang-toggle': 'English',
-                'hero-h1': '湖仓系统 和 AI 训推<span class="highlight">透明加速存储底座</span>',
-                'hero-tagline': 'S3 兼容对象协议、POSIX 文件语义与远程对象存储加速统一在同一套 ChunkServer 底座上。',
+                'hero-h1': '湖仓系统 和 AI 训推<br><span class="highlight">透明加速存储底座</span>',
                 'whitepaper-button': '技术白皮书',
                 'features-label': '核心功能',
                 'features-h2': '从统一数据底座到多协议接入',
