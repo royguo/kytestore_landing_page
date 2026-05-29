@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KyteStore 技术白皮书</title>
+    <meta name="description" content="KyteStore 技术说明书和实现细节示例页面">
+    <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+    <style>
+        :root {
+            --bg: #fffdf9;
+            --panel: #f7f1e8;
+            --text: #26221f;
+            --muted: #6f6760;
+            --border: #ded4c8;
+            --accent: #b65d32;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: Georgia, "Times New Roman", "Microsoft YaHei", serif;
+            line-height: 1.75;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .docs-shell {
+            display: grid;
+            grid-template-columns: 260px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            padding: 36px 28px;
+            border-right: 1px solid var(--border);
+            background: var(--panel);
+        }
+
+        .brand {
+            margin-bottom: 28px;
+            font-size: 22px;
+            letter-spacing: 0.04em;
+        }
+
+        .brand span {
+            color: var(--accent);
+        }
+
+        .sidebar nav {
+            display: grid;
+            gap: 10px;
+            margin-top: 22px;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 14px;
+        }
+
+        .sidebar .back {
+            display: inline-block;
+            margin-top: 32px;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+        }
+
+        main {
+            max-width: 880px;
+            padding: 56px 56px 96px;
+        }
+
+        .eyebrow {
+            margin-bottom: 12px;
+            color: var(--muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin-bottom: 14px;
+            font-size: 42px;
+            font-weight: normal;
+            line-height: 1.2;
+        }
+
+        .intro {
+            max-width: 720px;
+            margin-bottom: 44px;
+            color: var(--muted);
+            font-size: 18px;
+        }
+
+        section {
+            padding-top: 34px;
+            margin-top: 34px;
+            border-top: 1px solid var(--border);
+        }
+
+        h2 {
+            margin-bottom: 14px;
+            font-size: 26px;
+            font-weight: normal;
+        }
+
+        p {
+            margin-bottom: 14px;
+            color: var(--muted);
+        }
+
+        ul {
+            padding-left: 1.3em;
+            color: var(--muted);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        code {
+            padding: 2px 5px;
+            border: 1px solid var(--border);
+            background: #fff8ef;
+            color: var(--text);
+            font-family: "Courier New", monospace;
+            font-size: 0.92em;
+        }
+
+        @media (max-width: 760px) {
+            .docs-shell {
+                display: block;
+            }
+
+            .sidebar {
+                position: static;
+                height: auto;
+                padding: 24px 22px;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            main {
+                padding: 36px 22px 72px;
+            }
+
+            h1 {
+                font-size: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="docs-shell">
+        <aside class="sidebar">
+            <div class="brand">Kyte<span>Store</span></div>
+            <div class="eyebrow">Whitepaper</div>
+            <nav aria-label="技术白皮书目录">
+                <a href="#overview">概览</a>
+                <a href="#architecture">统一架构</a>
+                <a href="#data-path">数据路径</a>
+                <a href="#protocols">协议接入</a>
+                <a href="#deployment">部署模式</a>
+                <a href="#roadmap">后续补充</a>
+            </nav>
+            <a class="back" href="index.html">返回首页</a>
+        </aside>
+
+        <main>
+            <div class="eyebrow">技术说明书示例</div>
+            <h1>KyteStore 技术白皮书</h1>
+            <p class="intro">本页面用于承载 KyteStore 的技术说明和实现细节。当前先提供精简示例结构，后续可以接入 Markdown/VitePress/Docusaurus 等文档生成流程。</p>
+
+            <section id="overview">
+                <h2>概览</h2>
+                <p>KyteStore 面向湖仓系统和 AI 训推场景，提供 S3 兼容对象协议、POSIX 文件语义和远程对象存储透明加速能力。</p>
+                <p>核心目标是在统一的数据底座上同时服务对象访问和文件访问，降低多套存储系统并行维护的复杂度。</p>
+            </section>
+
+            <section id="architecture">
+                <h2>统一架构</h2>
+                <ul>
+                    <li><code>ChunkServer</code> 负责统一的数据分片、复制、本地缓存和冷热分离。</li>
+                    <li><code>S3 Subsystem</code> 提供对象语义、S3 API Endpoint 和对象元数据能力。</li>
+                    <li><code>FS Subsystem</code> 提供命名空间、文件元数据和 POSIX/FUSE 接入能力。</li>
+                </ul>
+            </section>
+
+            <section id="data-path">
+                <h2>数据路径</h2>
+                <p>KyteStore 支持 <code>local only</code> 和 <code>mixed</code> 两类存储模式。本地 SSD 可用于热数据加速，远端 S3/COS/OSS 可作为容量层和回源数据层。</p>
+            </section>
+
+            <section id="protocols">
+                <h2>协议接入</h2>
+                <p>当前重点覆盖 S3 兼容对象协议和 POSIX/FUSE 文件语义。架构上可以扩展更多接入协议，按业务需要适配到统一 ChunkServer 数据底座。</p>
+            </section>
+
+            <section id="deployment">
+                <h2>部署模式</h2>
+                <p>最小形态支持单机模拟集群部署，便于 PoC 和开发验证；生产形态可按 FE、数据面和控制面拆分部署，逐步增加资源投入。</p>
+            </section>
+
+            <section id="roadmap">
+                <h2>后续补充</h2>
+                <ul>
+                    <li>补充完整读写路径、元数据路径和异常恢复流程。</li>
+                    <li>补充文件加速性能数据、压测环境和复现实验说明。</li>
+                    <li>补充部署参数、容量规划和运维观测指标。</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+</body>
+</html>
