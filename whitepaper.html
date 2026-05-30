@@ -4,16 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KyteStore 技术白皮书</title>
-    <meta name="description" content="KyteStore 技术说明书和实现细节示例页面">
+    <meta name="description" content="KyteStore 面向湖仓系统和 AI 训推的透明加速存储底座技术白皮书">
     <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
     <style>
         :root {
             --bg: #fffdf9;
+            --paper: #ffffff;
             --panel: #f7f1e8;
-            --text: #26221f;
-            --muted: #6f6760;
+            --panel-strong: #efe4d7;
+            --text: #24211f;
+            --muted: #6e665f;
             --border: #ded4c8;
-            --accent: #b65d32;
+            --border-strong: #c8b8a8;
+            --accent: #2f6397;
+            --accent-warm: #b65d32;
+            --green: #177245;
+            --blue-soft: #eef5fc;
+            --green-soft: #eef8f2;
+            --gold-soft: #fff7e6;
         }
 
         * {
@@ -22,11 +30,16 @@
             padding: 0;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             background: var(--bg);
             color: var(--text);
             font-family: Georgia, "Times New Roman", "Microsoft YaHei", serif;
             line-height: 1.75;
+            overflow-x: hidden;
         }
 
         a {
@@ -40,7 +53,7 @@
 
         .docs-shell {
             display: grid;
-            grid-template-columns: 260px minmax(0, 1fr);
+            grid-template-columns: 300px minmax(0, 1fr);
             min-height: 100vh;
         }
 
@@ -48,14 +61,15 @@
             position: sticky;
             top: 0;
             height: 100vh;
-            padding: 36px 28px;
+            overflow-y: auto;
+            padding: 30px 24px 36px;
             border-right: 1px solid var(--border);
             background: var(--panel);
         }
 
         .brand {
-            margin-bottom: 28px;
-            font-size: 22px;
+            margin-bottom: 6px;
+            font-size: 24px;
             letter-spacing: 0.04em;
         }
 
@@ -63,23 +77,50 @@
             color: var(--accent);
         }
 
-        .sidebar nav {
-            display: grid;
-            gap: 10px;
-            margin-top: 22px;
+        .side-meta {
+            color: var(--muted);
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 14px;
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
         }
 
-        .sidebar .back {
+        .toc {
+            display: grid;
+            gap: 18px;
+            margin-top: 28px;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+        }
+
+        .toc-group {
+            display: grid;
+            gap: 7px;
+        }
+
+        .toc-title {
+            color: var(--text);
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+        .toc-child {
+            display: block;
+            padding-left: 14px;
+            color: var(--muted);
+        }
+
+        .back {
             display: inline-block;
-            margin-top: 32px;
+            margin-top: 30px;
+            color: var(--accent-warm);
             font-family: Arial, Helvetica, sans-serif;
             font-size: 13px;
         }
 
         main {
-            max-width: 880px;
+            width: 100%;
+            max-width: 1080px;
             padding: 56px 56px 96px;
         }
 
@@ -90,41 +131,41 @@
             font-size: 12px;
             letter-spacing: 0.16em;
             text-transform: uppercase;
+            overflow-wrap: anywhere;
         }
 
         h1 {
-            margin-bottom: 14px;
-            font-size: 42px;
+            max-width: 860px;
+            margin-bottom: 16px;
+            font-size: 46px;
             font-weight: normal;
-            line-height: 1.2;
-        }
-
-        .intro {
-            max-width: 720px;
-            margin-bottom: 44px;
-            color: var(--muted);
-            font-size: 18px;
-        }
-
-        section {
-            padding-top: 34px;
-            margin-top: 34px;
-            border-top: 1px solid var(--border);
+            line-height: 1.16;
         }
 
         h2 {
-            margin-bottom: 14px;
-            font-size: 26px;
+            margin-bottom: 18px;
+            font-size: 32px;
             font-weight: normal;
+            line-height: 1.25;
+        }
+
+        h3 {
+            margin: 28px 0 12px;
+            font-size: 21px;
+            font-weight: normal;
+            color: var(--text);
         }
 
         p {
+            max-width: 860px;
             margin-bottom: 14px;
             color: var(--muted);
+            overflow-wrap: anywhere;
         }
 
         ul {
-            padding-left: 1.3em;
+            max-width: 860px;
+            padding-left: 1.35em;
             color: var(--muted);
         }
 
@@ -141,7 +182,193 @@
             font-size: 0.92em;
         }
 
-        @media (max-width: 760px) {
+        .intro {
+            max-width: 860px;
+            margin-bottom: 28px;
+            color: var(--muted);
+            font-size: 18px;
+        }
+
+        .notice {
+            max-width: 860px;
+            margin: 24px 0 0;
+            padding: 16px 18px;
+            border: 1px solid var(--border);
+            background: var(--panel);
+            color: var(--muted);
+            font-size: 15px;
+        }
+
+        .chapter {
+            padding-top: 54px;
+            margin-top: 54px;
+            border-top: 1px solid var(--border);
+        }
+
+        .section-block {
+            margin-top: 34px;
+        }
+
+        .image-figure {
+            max-width: 900px;
+            margin: 30px 0;
+        }
+
+        .image-figure img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border: 1px solid var(--border);
+            background: #fff;
+            box-shadow: 0 4px 24px rgba(31, 31, 31, 0.06);
+        }
+
+        .caption {
+            margin-top: 10px;
+            color: var(--muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+        }
+
+        .grid-2,
+        .grid-3 {
+            display: grid;
+            gap: 18px;
+            margin: 24px 0;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .info-box {
+            padding: 20px;
+            border: 1px solid var(--border);
+            background: var(--paper);
+        }
+
+        .info-box h4 {
+            margin-bottom: 8px;
+            color: var(--accent);
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .info-box p {
+            margin: 0;
+            font-size: 15px;
+        }
+
+        table {
+            width: 100%;
+            margin: 22px 0;
+            border-collapse: collapse;
+            background: var(--paper);
+            border: 1px solid var(--border);
+        }
+
+        th,
+        td {
+            padding: 13px 15px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background: var(--panel);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        td {
+            color: var(--muted);
+            font-size: 15px;
+            overflow-wrap: anywhere;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .diagram {
+            max-width: 900px;
+            margin: 28px 0;
+            padding: 18px;
+            border: 1px solid var(--border);
+            background: var(--paper);
+            overflow-x: auto;
+        }
+
+        .diagram svg {
+            display: block;
+            width: 100%;
+            min-width: 760px;
+            height: auto;
+        }
+
+        .svg-text {
+            fill: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 14px;
+        }
+
+        .svg-small {
+            fill: var(--muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 11px;
+        }
+
+        .svg-title {
+            fill: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .mode-list {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin: 22px 0;
+        }
+
+        .mode {
+            padding: 16px;
+            border: 1px solid var(--border);
+            background: var(--paper);
+        }
+
+        .mode strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--accent);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .mode span {
+            display: block;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .footer-note {
+            margin-top: 70px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+        }
+
+        @media (max-width: 960px) {
             .docs-shell {
                 display: block;
             }
@@ -154,12 +381,35 @@
                 border-bottom: 1px solid var(--border);
             }
 
+            .toc {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             main {
-                padding: 36px 22px 72px;
+                padding: 38px 22px 72px;
+            }
+
+            .diagram {
+                max-width: 100%;
+                padding: 12px;
+            }
+
+            .diagram svg {
+                min-width: 0;
             }
 
             h1 {
-                font-size: 30px;
+                font-size: 34px;
+            }
+
+            h2 {
+                font-size: 27px;
+            }
+
+            .grid-2,
+            .grid-3,
+            .mode-list {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -168,61 +418,685 @@
     <div class="docs-shell">
         <aside class="sidebar">
             <div class="brand">Kyte<span>Store</span></div>
-            <div class="eyebrow">Whitepaper</div>
-            <nav aria-label="技术白皮书目录">
-                <a href="#overview">概览</a>
-                <a href="#architecture">统一架构</a>
-                <a href="#data-path">数据路径</a>
-                <a href="#protocols">协议接入</a>
-                <a href="#deployment">部署模式</a>
-                <a href="#roadmap">后续补充</a>
+            <div class="side-meta">Technical Whitepaper</div>
+            <nav class="toc" aria-label="技术白皮书目录">
+                <div class="toc-group">
+                    <a class="toc-title" href="#overview">1. 概览</a>
+                    <a class="toc-child" href="#overview-problem">解决的问题</a>
+                    <a class="toc-child" href="#overview-scenarios">典型场景</a>
+                    <a class="toc-child" href="#overview-capabilities">能力地图</a>
+                </div>
+                <div class="toc-group">
+                    <a class="toc-title" href="#architecture">2. 整体架构</a>
+                    <a class="toc-child" href="#architecture-layers">系统分层</a>
+                    <a class="toc-child" href="#architecture-roles">核心角色</a>
+                    <a class="toc-child" href="#architecture-modes">存储模式</a>
+                </div>
+                <div class="toc-group">
+                    <a class="toc-title" href="#object">3. 对象加速</a>
+                    <a class="toc-child" href="#object-gateway">S3 网关</a>
+                    <a class="toc-child" href="#object-read">读缓存</a>
+                    <a class="toc-child" href="#object-write">写加速</a>
+                    <a class="toc-child" href="#object-api">API 覆盖</a>
+                </div>
+                <div class="toc-group">
+                    <a class="toc-title" href="#file">4. 文件加速</a>
+                    <a class="toc-child" href="#file-positioning">POSIX 语义定位</a>
+                    <a class="toc-child" href="#file-metadata">元数据模型</a>
+                    <a class="toc-child" href="#file-api">FS API</a>
+                </div>
+                <div class="toc-group">
+                    <a class="toc-title" href="#chunk">5. ChunkServer 底座</a>
+                    <a class="toc-child" href="#chunk-model">Chunk 模型</a>
+                    <a class="toc-child" href="#chunk-replica">多副本</a>
+                    <a class="toc-child" href="#chunk-tiering">冷热分离</a>
+                </div>
+                <div class="toc-group">
+                    <a class="toc-title" href="#ha">6. 一致性与高可用</a>
+                    <a class="toc-child" href="#ha-topology">拓扑 Fence</a>
+                    <a class="toc-child" href="#ha-recovery">恢复与维护</a>
+                    <a class="toc-child" href="#ha-semantics">可见性语义</a>
+                </div>
+                <div class="toc-group">
+                    <a class="toc-title" href="#ops">7. API 与运维</a>
+                    <a class="toc-child" href="#ops-admin">管理接口</a>
+                    <a class="toc-child" href="#ops-monitoring">监控指标</a>
+                    <a class="toc-child" href="#ops-deploy">部署形态</a>
+                </div>
+                <div class="toc-group">
+                    <a class="toc-title" href="#performance">8. 性能与调优</a>
+                    <a class="toc-child" href="#performance-object">对象性能</a>
+                    <a class="toc-child" href="#performance-file">文件性能</a>
+                    <a class="toc-child" href="#performance-tuning">调优方向</a>
+                </div>
             </nav>
             <a class="back" href="index.html">返回首页</a>
         </aside>
 
         <main>
-            <div class="eyebrow">技术说明书示例</div>
+            <div class="eyebrow">Version 0.1 · based on KyteStore dev 995f5093</div>
             <h1>KyteStore 技术白皮书</h1>
-            <p class="intro">本页面用于承载 KyteStore 的技术说明和实现细节。当前先提供精简示例结构，后续可以接入 Markdown/VitePress/Docusaurus 等文档生成流程。</p>
+            <p class="intro">KyteStore 是面向湖仓系统和 AI 训推场景的透明加速存储底座。它在统一的 ChunkServer 数据层之上提供 S3 兼容对象协议和 POSIX 文件语义，让用户可以在不重写业务系统的前提下，把热数据留在本地高速介质，把远端 S3/COS/OSS 作为容量层和回源层。</p>
+            <div class="notice">本文档面向 KyteStore 用户、架构师和平台运维人员，重点解释系统架构、读写路径、元数据模型、API 边界和部署运维方式。部分 FSSubsystem 能力仍处于演进阶段，文中会明确区分已落地能力和设计方向。</div>
 
-            <section id="overview">
-                <h2>概览</h2>
-                <p>KyteStore 面向湖仓系统和 AI 训推场景，提供 S3 兼容对象协议、POSIX 文件语义和远程对象存储透明加速能力。</p>
-                <p>核心目标是在统一的数据底座上同时服务对象访问和文件访问，降低多套存储系统并行维护的复杂度。</p>
+            <section id="overview" class="chapter">
+                <div class="eyebrow">Overview</div>
+                <h2>1. 概览</h2>
+
+                <div id="overview-problem" class="section-block">
+                    <h3>解决的问题</h3>
+                    <p>湖仓引擎、分析数据库、AI 训练任务和推理服务经常同时访问远端对象存储。直接访问 S3/COS/OSS 的优势是容量弹性和低运维成本，但在高频小对象、热数据反复读取、checkpoint 写入、数据集扫描等场景中，远端访问会带来延迟、带宽成本和吞吐抖动。</p>
+                    <p>KyteStore 在业务系统和远端对象存储之间增加一层本地分布式加速层。用户仍然使用熟悉的 S3 Endpoint 或文件路径，底层由 KyteStore 负责路由、本地缓存、写缓冲、多副本保护、异步回刷和故障恢复。</p>
+                </div>
+
+                <figure class="image-figure">
+                    <img src="assets/images/ecosystem.jpg" width="1254" height="1254" alt="KyteStore ecosystem">
+                    <figcaption class="caption">湖仓系统通过 S3 兼容协议接入，AI 系统通过 POSIX 兼容文件语义接入，二者共享统一 ChunkServer 底座。</figcaption>
+                </figure>
+
+                <div id="overview-scenarios" class="section-block">
+                    <h3>典型场景</h3>
+                    <div class="grid-3">
+                        <div class="info-box">
+                            <h4>湖仓查询加速</h4>
+                            <p>ClickHouse、Doris、DuckDB、StarRocks 等系统可以把 KyteStore 当作 S3 Endpoint，降低热点对象读取延迟，并减少远端对象存储带宽消耗。</p>
+                        </div>
+                        <div class="info-box">
+                            <h4>AI 数据集访问</h4>
+                            <p>训练和推理任务可以通过 POSIX/FUSE 语义读取数据集、模型文件和中间结果，让已有脚本保留路径访问方式。</p>
+                        </div>
+                        <div class="info-box">
+                            <h4>写入与 checkpoint</h4>
+                            <p>高频写入先落到本地 Write Buffer，用户可以写后即读，后台再异步同步到远端对象存储。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="overview-capabilities" class="section-block">
+                    <h3>能力地图</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>能力</th>
+                                <th>用户价值</th>
+                                <th>核心机制</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>S3 兼容对象访问</td>
+                                <td>替换远端对象存储 Endpoint，不改变湖仓和分析系统接入方式。</td>
+                                <td>FE S3GatewayService + KyteS3SDK + DS S3SubSystem。</td>
+                            </tr>
+                            <tr>
+                                <td>POSIX 文件语义</td>
+                                <td>让 AI 程序通过路径、目录、文件句柄和 rename 语义访问存储。</td>
+                                <td>PosixGatewayService + DS FSSubsystem 元数据分片。</td>
+                            </tr>
+                            <tr>
+                                <td>本地读缓存</td>
+                                <td>把热点对象切片落到本地 SSD，降低重复读取延迟。</td>
+                                <td>Read Cache Namespace、LocalMetaKV、ChunkSubSystem。</td>
+                            </tr>
+                            <tr>
+                                <td>写缓冲加速</td>
+                                <td>写入先提交到本地多副本，后台异步刷回 S3，支持写后即读。</td>
+                                <td>Write Buffer Namespace、ObjectMetaIndex、BufferedObjectSyncManager。</td>
+                            </tr>
+                            <tr>
+                                <td>多副本和高可用</td>
+                                <td>写入数据不依赖单个节点，异常时可恢复和迁移。</td>
+                                <td>Chunk 多副本、Primary/Secondary 写入复制、Slot Recovery。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </section>
 
-            <section id="architecture">
-                <h2>统一架构</h2>
-                <ul>
-                    <li><code>ChunkServer</code> 负责统一的数据分片、复制、本地缓存和冷热分离。</li>
-                    <li><code>S3 Subsystem</code> 提供对象语义、S3 API Endpoint 和对象元数据能力。</li>
-                    <li><code>FS Subsystem</code> 提供命名空间、文件元数据和 POSIX/FUSE 接入能力。</li>
-                </ul>
+            <section id="architecture" class="chapter">
+                <div class="eyebrow">Architecture</div>
+                <h2>2. 整体架构</h2>
+
+                <figure class="image-figure">
+                    <img src="assets/images/architecture.jpg" width="1536" height="1024" alt="KyteStore architecture">
+                    <figcaption class="caption">KyteStore 由 FE 接入层、MetaServer 控制面、DataServer 数据面和远端对象存储后端组成。</figcaption>
+                </figure>
+
+                <div id="architecture-layers" class="section-block">
+                    <h3>系统分层</h3>
+                    <div class="diagram" role="img" aria-label="KyteStore layered architecture diagram">
+                        <svg viewBox="0 0 980 520" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L9,3 z" fill="#2f6397"/>
+                                </marker>
+                            </defs>
+                            <rect x="30" y="28" width="920" height="58" rx="8" fill="#eef5fc" stroke="#9bbbd7"/>
+                            <text x="490" y="63" text-anchor="middle" class="svg-title">用户系统：湖仓引擎、分析数据库、AI 训练 / 推理任务</text>
+
+                            <rect x="72" y="126" width="240" height="72" rx="8" fill="#ffffff" stroke="#c8b8a8"/>
+                            <text x="192" y="158" text-anchor="middle" class="svg-title">S3 Gateway</text>
+                            <text x="192" y="180" text-anchor="middle" class="svg-small">HTTP S3 Endpoint</text>
+
+                            <rect x="370" y="126" width="240" height="72" rx="8" fill="#ffffff" stroke="#c8b8a8"/>
+                            <text x="490" y="158" text-anchor="middle" class="svg-title">POSIX Gateway</text>
+                            <text x="490" y="180" text-anchor="middle" class="svg-small">FUSE / FS Endpoint</text>
+
+                            <rect x="668" y="126" width="240" height="72" rx="8" fill="#ffffff" stroke="#c8b8a8" stroke-dasharray="6 5"/>
+                            <text x="788" y="158" text-anchor="middle" class="svg-title">Future Protocols</text>
+                            <text x="788" y="180" text-anchor="middle" class="svg-small">HDFS / NFS / SDK</text>
+
+                            <rect x="70" y="250" width="560" height="150" rx="10" fill="#eef8f2" stroke="#8dbfa4"/>
+                            <text x="350" y="280" text-anchor="middle" class="svg-title">DataServer</text>
+                            <rect x="110" y="306" width="150" height="56" rx="6" fill="#ffffff" stroke="#9bbbd7"/>
+                            <text x="185" y="338" text-anchor="middle" class="svg-text">S3 SubSystem</text>
+                            <rect x="290" y="306" width="150" height="56" rx="6" fill="#ffffff" stroke="#9bbbd7"/>
+                            <text x="365" y="338" text-anchor="middle" class="svg-text">FS Subsystem</text>
+                            <rect x="470" y="306" width="120" height="56" rx="6" fill="#ffffff" stroke="#9bbbd7"/>
+                            <text x="530" y="338" text-anchor="middle" class="svg-text">LocalMetaKV</text>
+                            <rect x="170" y="374" width="360" height="44" rx="6" fill="#ffffff" stroke="#177245"/>
+                            <text x="350" y="402" text-anchor="middle" class="svg-title">Unified ChunkServer / ChunkSubSystem</text>
+
+                            <rect x="692" y="250" width="216" height="150" rx="10" fill="#fff7e6" stroke="#d9b668"/>
+                            <text x="800" y="282" text-anchor="middle" class="svg-title">MetaServer</text>
+                            <text x="800" y="308" text-anchor="middle" class="svg-small">Namespace / Slot Topology</text>
+                            <text x="800" y="332" text-anchor="middle" class="svg-small">Chunk Placement</text>
+                            <text x="800" y="356" text-anchor="middle" class="svg-small">Owner Epoch / Fencing</text>
+                            <text x="800" y="380" text-anchor="middle" class="svg-small">FoundationDB Metadata</text>
+
+                            <rect x="260" y="455" width="460" height="46" rx="8" fill="#ffffff" stroke="#9bbbd7"/>
+                            <text x="490" y="484" text-anchor="middle" class="svg-title">Remote Object Store：S3 / COS / OSS</text>
+
+                            <line x1="192" y1="198" x2="238" y2="250" stroke="#2f6397" stroke-width="2" marker-end="url(#arrow-blue)"/>
+                            <line x1="490" y1="198" x2="410" y2="250" stroke="#2f6397" stroke-width="2" marker-end="url(#arrow-blue)"/>
+                            <line x1="788" y1="198" x2="558" y2="250" stroke="#2f6397" stroke-width="2" marker-end="url(#arrow-blue)"/>
+                            <line x1="630" y1="322" x2="692" y2="322" stroke="#2f6397" stroke-width="2" marker-end="url(#arrow-blue)"/>
+                            <line x1="490" y1="418" x2="490" y2="455" stroke="#2f6397" stroke-width="2" marker-end="url(#arrow-blue)"/>
+                        </svg>
+                    </div>
+                    <p>FE 是接入层，负责协议解析、鉴权信息提取、响应格式化和 SDK 转发；MetaServer 是控制面，负责 namespace、slot 拓扑、chunk 分配和 owner fencing；DataServer 是数据面，运行 S3SubSystem、FSSubsystem 与统一 ChunkSubSystem。</p>
+                </div>
+
+                <div id="architecture-roles" class="section-block">
+                    <h3>核心角色</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>角色</th>
+                                <th>职责</th>
+                                <th>用户侧影响</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>FE</td>
+                                <td>S3 HTTP 网关、未来 POSIX/FUSE 网关、启动 readiness、请求路由入口。</td>
+                                <td>提供稳定 Endpoint，屏蔽 DS 拓扑变化。</td>
+                            </tr>
+                            <tr>
+                                <td>MetaServer</td>
+                                <td>持久化全局元数据，管理 DataServer、ChunkGroup、S3 Namespace、Slot Topology 和 FS owner epoch。</td>
+                                <td>提供一致的控制面，不进入普通对象读写热路径。</td>
+                            </tr>
+                            <tr>
+                                <td>DataServer</td>
+                                <td>实际数据读写、对象读缓存、写缓冲、文件元数据服务、本地 Chunk 管理。</td>
+                                <td>承载吞吐和延迟，随着节点数横向扩展。</td>
+                            </tr>
+                            <tr>
+                                <td>Remote S3</td>
+                                <td>容量层、回源层和最终对象存储后端。</td>
+                                <td>保留云对象存储的容量弹性和跨系统可访问性。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="architecture-modes" class="section-block">
+                    <h3>存储模式</h3>
+                    <div class="mode-list">
+                        <div class="mode">
+                            <strong>read_cache</strong>
+                            <span>KyteStore 作为 read-through cache，GET miss 回源 S3 并填充本地缓存；PUT/DELETE 可走远端直写语义。</span>
+                        </div>
+                        <div class="mode">
+                            <strong>read_write / mixed</strong>
+                            <span>读使用 read-cache，写进入 write-buffer，本地多副本提交后异步刷回 S3。</span>
+                        </div>
+                        <div class="mode">
+                            <strong>local_only</strong>
+                            <span>不访问远端 S3，读写都在本地 write-buffer 和 ChunkServer 内完成，适合隔离验证或本地优先场景。</span>
+                        </div>
+                    </div>
+                </div>
             </section>
 
-            <section id="data-path">
-                <h2>数据路径</h2>
-                <p>KyteStore 支持 <code>local only</code> 和 <code>mixed</code> 两类存储模式。本地 SSD 可用于热数据加速，远端 S3/COS/OSS 可作为容量层和回源数据层。</p>
+            <section id="object" class="chapter">
+                <div class="eyebrow">Object Acceleration</div>
+                <h2>3. 对象加速</h2>
+
+                <div id="object-gateway" class="section-block">
+                    <h3>S3 网关</h3>
+                    <p>FE 的 S3GatewayService 提供 Path-style S3 HTTP 入口，解析 HTTP Method、URI、bucket、object key、Range、分页参数和请求级凭证。FE 不再在对象 API 热路径直连后端 S3，而是统一通过 KyteS3SDK 转发到 DS，由 DS 负责 read-through、write-buffer、LIST merge、delete propagation 和 cache invalidation。</p>
+                    <p>后端凭证可以来自 FE 固定配置，也可以通过 <code>x-kyte-s3-*</code> 请求 Header 传入，便于一个 KyteStore Endpoint 代理不同云厂商或不同 bucket 的后端身份。</p>
+                </div>
+
+                <div id="object-read" class="section-block">
+                    <h3>读缓存路径</h3>
+                    <div class="diagram" role="img" aria-label="Object read path diagram">
+                        <svg viewBox="0 0 980 360" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <marker id="arrow-read" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L9,3 z" fill="#2f6397"/>
+                                </marker>
+                            </defs>
+                            <rect x="34" y="44" width="136" height="58" rx="8" fill="#eef5fc" stroke="#9bbbd7"/>
+                            <text x="102" y="78" text-anchor="middle" class="svg-title">Client</text>
+                            <rect x="230" y="44" width="136" height="58" rx="8" fill="#ffffff" stroke="#c8b8a8"/>
+                            <text x="298" y="78" text-anchor="middle" class="svg-title">FE</text>
+                            <rect x="426" y="44" width="136" height="58" rx="8" fill="#ffffff" stroke="#c8b8a8"/>
+                            <text x="494" y="78" text-anchor="middle" class="svg-title">KyteS3SDK</text>
+                            <rect x="622" y="44" width="136" height="58" rx="8" fill="#eef8f2" stroke="#8dbfa4"/>
+                            <text x="690" y="78" text-anchor="middle" class="svg-title">DS Slot Owner</text>
+                            <rect x="812" y="44" width="136" height="58" rx="8" fill="#fff7e6" stroke="#d9b668"/>
+                            <text x="880" y="78" text-anchor="middle" class="svg-title">Remote S3</text>
+                            <line x1="170" y1="73" x2="230" y2="73" stroke="#2f6397" stroke-width="2" marker-end="url(#arrow-read)"/>
+                            <line x1="366" y1="73" x2="426" y2="73" stroke="#2f6397" stroke-width="2" marker-end="url(#arrow-read)"/>
+                            <line x1="562" y1="73" x2="622" y2="73" stroke="#2f6397" stroke-width="2" marker-end="url(#arrow-read)"/>
+                            <line x1="758" y1="73" x2="812" y2="73" stroke="#2f6397" stroke-width="2" marker-end="url(#arrow-read)"/>
+
+                            <rect x="110" y="172" width="760" height="126" rx="10" fill="#ffffff" stroke="#ded4c8"/>
+                            <text x="138" y="206" class="svg-title">ReadObjFile 流程</text>
+                            <text x="138" y="234" class="svg-text">1. SDK 按 slice_length 切片，基于 namespace + object key 计算 slot。</text>
+                            <text x="138" y="260" class="svg-text">2. DS 查询 LocalMetaKV：命中则从本地 Chunk 读取并返回。</text>
+                            <text x="138" y="286" class="svg-text">3. 未命中时 deduplicate cache load，Leader 回源 S3，写入 Chunk 并更新 CacheIndex。</text>
+                        </svg>
+                    </div>
+                    <p>读缓存的核心是切片和去重。SDK 将大对象范围读切成多个 slice，按 slot 路由到对应 DS。DS 先查本地 CacheIndex；缓存未命中时通过 CacheLoadTaskShard 避免同一范围被多个请求重复回源。</p>
+                </div>
+
+                <div id="object-write" class="section-block">
+                    <h3>写加速 Write Buffer</h3>
+                    <p>写路径使用独立的 Write Buffer Namespace。PutObject 和 Multipart Upload 的数据先写入 DS 本地 Chunk，并由 ChunkSubSystem 执行多副本同步；对象被 Seal 后立即对后续 GET/HEAD/LIST 可见，后台 S3 sync 再把数据上传到远端对象存储。</p>
+                    <div class="diagram" role="img" aria-label="Write buffer state diagram">
+                        <svg viewBox="0 0 980 330" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <marker id="arrow-write" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L9,3 z" fill="#177245"/>
+                                </marker>
+                            </defs>
+                            <rect x="70" y="54" width="164" height="72" rx="8" fill="#eef5fc" stroke="#9bbbd7"/>
+                            <text x="152" y="84" text-anchor="middle" class="svg-title">Put / UploadPart</text>
+                            <text x="152" y="106" text-anchor="middle" class="svg-small">attachment data</text>
+                            <rect x="300" y="54" width="164" height="72" rx="8" fill="#eef8f2" stroke="#8dbfa4"/>
+                            <text x="382" y="84" text-anchor="middle" class="svg-title">AppendChunk</text>
+                            <text x="382" y="106" text-anchor="middle" class="svg-small">local multi-replica</text>
+                            <rect x="530" y="54" width="164" height="72" rx="8" fill="#ffffff" stroke="#c8b8a8"/>
+                            <text x="612" y="84" text-anchor="middle" class="svg-title">Seal Object</text>
+                            <text x="612" y="106" text-anchor="middle" class="svg-small">visible generation</text>
+                            <rect x="760" y="54" width="164" height="72" rx="8" fill="#fff7e6" stroke="#d9b668"/>
+                            <text x="842" y="84" text-anchor="middle" class="svg-title">Async S3 Sync</text>
+                            <text x="842" y="106" text-anchor="middle" class="svg-small">kSealed -> kSynced</text>
+                            <line x1="234" y1="90" x2="300" y2="90" stroke="#177245" stroke-width="2" marker-end="url(#arrow-write)"/>
+                            <line x1="464" y1="90" x2="530" y2="90" stroke="#177245" stroke-width="2" marker-end="url(#arrow-write)"/>
+                            <line x1="694" y1="90" x2="760" y2="90" stroke="#177245" stroke-width="2" marker-end="url(#arrow-write)"/>
+                            <rect x="120" y="190" width="740" height="92" rx="10" fill="#ffffff" stroke="#ded4c8"/>
+                            <text x="150" y="224" class="svg-title">关键语义</text>
+                            <text x="150" y="252" class="svg-text">写后即读：GET 先检查 write-buffer current head / tombstone，再回退 read-cache 或远端 S3。</text>
+                            <text x="150" y="276" class="svg-text">提交边界：本地多副本写入和对象 Seal 成功后，对象对 KyteStore 用户可见。</text>
+                        </svg>
+                    </div>
+                </div>
+
+                <div id="object-api" class="section-block">
+                    <h3>S3 API 覆盖</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>API</th>
+                                <th>状态</th>
+                                <th>说明</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>GetObject / Range GET</td>
+                                <td>已实现</td>
+                                <td>支持整对象和 Range 读取，显式 offset-range 不要求先 HEAD。</td>
+                            </tr>
+                            <tr>
+                                <td>PutObject</td>
+                                <td>已实现 / 持续增强</td>
+                                <td>read_write 与 local_only 写入 Write Buffer；read_cache 模式可代理远端直写。</td>
+                            </tr>
+                            <tr>
+                                <td>HeadObject / ListObjectsV2</td>
+                                <td>已实现</td>
+                                <td>合并本地 write-buffer 和远端对象视图，返回对象元信息和分页列表。</td>
+                            </tr>
+                            <tr>
+                                <td>DeleteObject / DeleteObjects</td>
+                                <td>已实现</td>
+                                <td>支持 tombstone、read-cache invalidation 和远端删除传播。</td>
+                            </tr>
+                            <tr>
+                                <td>Multipart Upload</td>
+                                <td>已实现 / 持续增强</td>
+                                <td>UploadPart 映射为 AppendObject，CompleteMultipartUpload 映射为 SealObject。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </section>
 
-            <section id="protocols">
-                <h2>协议接入</h2>
-                <p>当前重点覆盖 S3 兼容对象协议和 POSIX/FUSE 文件语义。架构上可以扩展更多接入协议，按业务需要适配到统一 ChunkServer 数据底座。</p>
+            <section id="file" class="chapter">
+                <div class="eyebrow">File Acceleration</div>
+                <h2>4. 文件加速</h2>
+
+                <div id="file-positioning" class="section-block">
+                    <h3>POSIX 语义定位</h3>
+                    <p>FSSubsystem 面向 AI / 大模型工作负载，不试图在第一阶段覆盖完整通用文件系统语义。优先级最高的是 dataset 读取、checkpoint 顺序写、临时文件 close 后 rename 发布、目录遍历、小文件 metadata 批处理和 close-to-open 可见性。</p>
+                    <p><code>kyte-fuse</code> 或 FS SDK 运行在客户端机器上；FE 提供 PosixGatewayService，负责鉴权、mount session、拓扑发现和兼容入口；长期高性能路径可以通过 FS SDK 缓存拓扑后直连 DS。</p>
+                </div>
+
+                <div id="file-metadata" class="section-block">
+                    <h3>元数据模型</h3>
+                    <p>文件元数据不放在 MetaServer/FDB 的普通热路径里。MS/FDB 负责 FS binding、bucket owner map、epoch、checkpoint pointer 和 inode range allocation；dentry、inode attr、extent map 由 DS FSSubsystem 的 inode bucket owner 负责。</p>
+                    <div class="diagram" role="img" aria-label="FS metadata routing diagram">
+                        <svg viewBox="0 0 980 420" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <marker id="arrow-fs" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L9,3 z" fill="#2f6397"/>
+                                </marker>
+                            </defs>
+                            <rect x="50" y="40" width="200" height="64" rx="8" fill="#eef5fc" stroke="#9bbbd7"/>
+                            <text x="150" y="70" text-anchor="middle" class="svg-title">Path / inode request</text>
+                            <text x="150" y="92" text-anchor="middle" class="svg-small">Lookup / Create / Readdir</text>
+
+                            <rect x="330" y="40" width="250" height="64" rx="8" fill="#ffffff" stroke="#c8b8a8"/>
+                            <text x="455" y="70" text-anchor="middle" class="svg-title">DirectoryLayout</text>
+                            <text x="455" y="92" text-anchor="middle" class="svg-small">hash(parent, name, seed) -> bucket</text>
+
+                            <rect x="660" y="40" width="250" height="64" rx="8" fill="#eef8f2" stroke="#8dbfa4"/>
+                            <text x="785" y="70" text-anchor="middle" class="svg-title">DS inode bucket owner</text>
+                            <text x="785" y="92" text-anchor="middle" class="svg-small">dentry / inode / extent</text>
+
+                            <line x1="250" y1="72" x2="330" y2="72" stroke="#2f6397" stroke-width="2" marker-end="url(#arrow-fs)"/>
+                            <line x1="580" y1="72" x2="660" y2="72" stroke="#2f6397" stroke-width="2" marker-end="url(#arrow-fs)"/>
+
+                            <rect x="78" y="178" width="824" height="156" rx="10" fill="#ffffff" stroke="#ded4c8"/>
+                            <text x="110" y="214" class="svg-title">Serving 与 Durability 分离</text>
+                            <text x="110" y="244" class="svg-text">Serving index：DS 本地 RocksDB / LocalMetaKV，服务 Lookup、GetAttr、GetExtents 和 Readdir。</text>
+                            <text x="110" y="272" class="svg-text">Durability：metadata mutation 先 append replicated WAL，再更新本地 materialized index。</text>
+                            <text x="110" y="300" class="svg-text">Recovery：加载 checkpoint object，replay checkpoint_lsn 之后的 WAL，重建在线索引。</text>
+
+                            <rect x="210" y="362" width="210" height="42" rx="6" fill="#fff7e6" stroke="#d9b668"/>
+                            <text x="315" y="389" text-anchor="middle" class="svg-text">MS/FDB: owner + epoch</text>
+                            <rect x="560" y="362" width="210" height="42" rx="6" fill="#fff7e6" stroke="#d9b668"/>
+                            <text x="665" y="389" text-anchor="middle" class="svg-text">Checkpoint pointer</text>
+                        </svg>
+                    </div>
+                    <p>这种设计避免每次 create/open/list 都访问 MS/FDB，让 metadata 热路径可以随 DS inode bucket 横向扩展。MS/FDB 仍然作为控制面存在，保证 owner fencing、checkpoint 定位和迁移恢复。</p>
+                </div>
+
+                <div id="file-api" class="section-block">
+                    <h3>FS API</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>接口组</th>
+                                <th>代表 RPC</th>
+                                <th>语义</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>生命周期与探测</td>
+                                <td>Probe</td>
+                                <td>查询 DS FSSubsystem 是否初始化、启动以及当前 FsStorageBinding。</td>
+                            </tr>
+                            <tr>
+                                <td>目录与文件元数据</td>
+                                <td>Mkdir, CreateFile, Lookup, GetAttr, Readdir, Unlink, Rmdir</td>
+                                <td>以 inode 和 parent/name 形式操作目录项和 inode 属性。</td>
+                            </tr>
+                            <tr>
+                                <td>路径兼容接口</td>
+                                <td>LookupPath, MkdirPath, CreateFilePath, ReaddirPath, UnlinkPath, RmdirPath</td>
+                                <td>提供面向网关和调试的路径级操作，内部仍会落到 inode/bucket 路由。</td>
+                            </tr>
+                            <tr>
+                                <td>布局与恢复</td>
+                                <td>GetDirectoryLayout, MaterializeDentryBucket, RecoverInodeBucket</td>
+                                <td>管理目录 bucket、虚拟到物理 bucket 映射和 inode bucket 恢复。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </section>
 
-            <section id="deployment">
-                <h2>部署模式</h2>
-                <p>最小形态支持单机模拟集群部署，便于 PoC 和开发验证；生产形态可按 FE、数据面和控制面拆分部署，逐步增加资源投入。</p>
+            <section id="chunk" class="chapter">
+                <div class="eyebrow">Chunk Foundation</div>
+                <h2>5. ChunkServer 存储底座</h2>
+
+                <div id="chunk-model" class="section-block">
+                    <h3>Chunk 模型</h3>
+                    <p>ChunkSubSystem 是 DataServer 内的低层块存储引擎。ChunkGroup 定义副本数、soft limit、block size 和存储介质策略；Chunk 是具体存储单元，经历 CREATING、NORMAL、SEALED、DELETED 等状态；Block 带有 header、版本、CRC 和时间戳，用于基本数据校验。</p>
+                </div>
+
+                <div id="chunk-replica" class="section-block">
+                    <h3>多副本与写入复制</h3>
+                    <div class="diagram" role="img" aria-label="Chunk replica pipeline diagram">
+                        <svg viewBox="0 0 980 360" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <marker id="arrow-replica" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L9,3 z" fill="#177245"/>
+                                </marker>
+                            </defs>
+                            <rect x="70" y="54" width="180" height="70" rx="8" fill="#eef5fc" stroke="#9bbbd7"/>
+                            <text x="160" y="85" text-anchor="middle" class="svg-title">Client Write</text>
+                            <text x="160" y="106" text-anchor="middle" class="svg-small">AppendChunk</text>
+
+                            <rect x="360" y="42" width="230" height="94" rx="8" fill="#eef8f2" stroke="#8dbfa4"/>
+                            <text x="475" y="78" text-anchor="middle" class="svg-title">Primary Replica</text>
+                            <text x="475" y="102" text-anchor="middle" class="svg-small">write local offset, then forward</text>
+
+                            <rect x="720" y="28" width="180" height="58" rx="8" fill="#ffffff" stroke="#c8b8a8"/>
+                            <text x="810" y="62" text-anchor="middle" class="svg-text">Secondary A</text>
+                            <rect x="720" y="112" width="180" height="58" rx="8" fill="#ffffff" stroke="#c8b8a8"/>
+                            <text x="810" y="146" text-anchor="middle" class="svg-text">Secondary B</text>
+                            <rect x="720" y="196" width="180" height="58" rx="8" fill="#ffffff" stroke="#c8b8a8" stroke-dasharray="6 5"/>
+                            <text x="810" y="230" text-anchor="middle" class="svg-text">Repair Target</text>
+
+                            <line x1="250" y1="89" x2="360" y2="89" stroke="#177245" stroke-width="2" marker-end="url(#arrow-replica)"/>
+                            <line x1="590" y1="77" x2="720" y2="57" stroke="#177245" stroke-width="2" marker-end="url(#arrow-replica)"/>
+                            <line x1="590" y1="101" x2="720" y2="141" stroke="#177245" stroke-width="2" marker-end="url(#arrow-replica)"/>
+                            <line x1="590" y1="118" x2="720" y2="225" stroke="#177245" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow-replica)"/>
+
+                            <rect x="160" y="280" width="660" height="44" rx="8" fill="#fff7e6" stroke="#d9b668"/>
+                            <text x="490" y="308" text-anchor="middle" class="svg-text">MetaServer 记录 ChunkInfo.server_ids，server_ids[0] 为 Primary，目标副本数来自 ChunkGroup。</text>
+                        </svg>
+                    </div>
+                    <p>分配 Chunk 时，MetaServer 先为每个 chunk 选择多个 DataServer，Primary 创建失败则该 Chunk 分配失败；Secondary 创建失败可以降级运行，并由后续 repair 补齐。写入时 Primary 先写本地，再按 primary_offset 转发给 Secondary。</p>
+                </div>
+
+                <div id="chunk-tiering" class="section-block">
+                    <h3>冷热数据管理</h3>
+                    <p>Read Cache Namespace 使用容量和低水位线控制本地缓存空间。GCManager 根据访问统计选择冷数据，删除 CacheIndex 和 ChunkReference 后释放本地 Chunk。Write Buffer 的 GC 只回收已经同步到远端或已删除的对象，避免把尚未远端持久化的数据当作普通缓存淘汰。</p>
+                </div>
             </section>
 
-            <section id="roadmap">
-                <h2>后续补充</h2>
-                <ul>
-                    <li>补充完整读写路径、元数据路径和异常恢复流程。</li>
-                    <li>补充文件加速性能数据、压测环境和复现实验说明。</li>
-                    <li>补充部署参数、容量规划和运维观测指标。</li>
-                </ul>
+            <section id="ha" class="chapter">
+                <div class="eyebrow">Consistency and HA</div>
+                <h2>6. 一致性与高可用</h2>
+
+                <div id="ha-topology" class="section-block">
+                    <h3>Slot 映射与拓扑 Fence</h3>
+                    <p>S3 Namespace 被划分为固定数量的 slot。SDK 按 object key 计算 slot，并根据 MetaServer 提供的 namespace topology 找到 owner DS。请求携带 slot_id 和 topo_version，DS 用本地缓存的 topology 校验请求是否路由到了正确 owner。</p>
+                    <div class="diagram" role="img" aria-label="S3 namespace slot mapping diagram">
+                        <svg viewBox="0 0 980 420" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <marker id="arrow-slot" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L9,3 z" fill="#2f6397"/>
+                                </marker>
+                            </defs>
+                            <text x="40" y="42" class="svg-title">Namespace Topology: topo_version = 42</text>
+                            <g>
+                                <rect x="40" y="78" width="90" height="60" fill="#eef5fc" stroke="#9bbbd7"/>
+                                <text x="85" y="104" text-anchor="middle" class="svg-text">Slot 0</text>
+                                <text x="85" y="124" text-anchor="middle" class="svg-small">DS-1</text>
+                                <rect x="132" y="78" width="90" height="60" fill="#eef8f2" stroke="#8dbfa4"/>
+                                <text x="177" y="104" text-anchor="middle" class="svg-text">Slot 1</text>
+                                <text x="177" y="124" text-anchor="middle" class="svg-small">DS-2</text>
+                                <rect x="224" y="78" width="90" height="60" fill="#fff7e6" stroke="#d9b668"/>
+                                <text x="269" y="104" text-anchor="middle" class="svg-text">Slot 2</text>
+                                <text x="269" y="124" text-anchor="middle" class="svg-small">DS-3</text>
+                                <rect x="316" y="78" width="90" height="60" fill="#eef5fc" stroke="#9bbbd7"/>
+                                <text x="361" y="104" text-anchor="middle" class="svg-text">Slot 3</text>
+                                <text x="361" y="124" text-anchor="middle" class="svg-small">DS-1</text>
+                                <rect x="408" y="78" width="90" height="60" fill="#eef8f2" stroke="#8dbfa4"/>
+                                <text x="453" y="104" text-anchor="middle" class="svg-text">Slot 4</text>
+                                <text x="453" y="124" text-anchor="middle" class="svg-small">DS-2</text>
+                                <rect x="500" y="78" width="90" height="60" fill="#fff7e6" stroke="#d9b668"/>
+                                <text x="545" y="104" text-anchor="middle" class="svg-text">Slot 5</text>
+                                <text x="545" y="124" text-anchor="middle" class="svg-small">DS-3</text>
+                                <rect x="592" y="78" width="90" height="60" fill="#eef5fc" stroke="#9bbbd7"/>
+                                <text x="637" y="104" text-anchor="middle" class="svg-text">Slot 6</text>
+                                <text x="637" y="124" text-anchor="middle" class="svg-small">DS-1</text>
+                                <rect x="684" y="78" width="90" height="60" fill="#eef8f2" stroke="#8dbfa4"/>
+                                <text x="729" y="104" text-anchor="middle" class="svg-text">Slot 7</text>
+                                <text x="729" y="124" text-anchor="middle" class="svg-small">DS-2</text>
+                            </g>
+                            <rect x="90" y="220" width="180" height="64" rx="8" fill="#ffffff" stroke="#c8b8a8"/>
+                            <text x="180" y="250" text-anchor="middle" class="svg-title">SDK</text>
+                            <text x="180" y="272" text-anchor="middle" class="svg-small">hash object -> slot</text>
+                            <rect x="400" y="220" width="180" height="64" rx="8" fill="#ffffff" stroke="#c8b8a8"/>
+                            <text x="490" y="250" text-anchor="middle" class="svg-title">Request</text>
+                            <text x="490" y="272" text-anchor="middle" class="svg-small">slot_id + topo_version</text>
+                            <rect x="710" y="220" width="180" height="64" rx="8" fill="#eef8f2" stroke="#8dbfa4"/>
+                            <text x="800" y="250" text-anchor="middle" class="svg-title">Owner DS</text>
+                            <text x="800" y="272" text-anchor="middle" class="svg-small">local fence check</text>
+                            <line x1="270" y1="252" x2="400" y2="252" stroke="#2f6397" stroke-width="2" marker-end="url(#arrow-slot)"/>
+                            <line x1="580" y1="252" x2="710" y2="252" stroke="#2f6397" stroke-width="2" marker-end="url(#arrow-slot)"/>
+                            <rect x="162" y="336" width="656" height="48" rx="8" fill="#fff7e6" stroke="#d9b668"/>
+                            <text x="490" y="366" text-anchor="middle" class="svg-text">topo_version 不一致、slot 不归本机、object 重新计算 slot 不一致时，DS fail-closed 并让客户端重试。</text>
+                        </svg>
+                    </div>
+                </div>
+
+                <div id="ha-recovery" class="section-block">
+                    <h3>恢复与维护</h3>
+                    <p>KyteStore 的恢复机制围绕 owner、manifest、sealed object metadata 和本地 MetaKV 状态构建。DS 可上报 LocalMetaKV 状态，MetaServer 提供 sealed manifest 和 candidate chunk 查询，维护接口支持进入用户 IO 维护模式、查看 slot recovery 状态、诊断对象范围和必要时 force reset failed slot。</p>
+                </div>
+
+                <div id="ha-semantics" class="section-block">
+                    <h3>可见性语义</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>场景</th>
+                                <th>语义</th>
+                                <th>实现要点</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>对象写后即读</td>
+                                <td>PutObject 或 SealObject 成功后，GET/HEAD/LIST 优先读取 write-buffer 当前版本。</td>
+                                <td>ObjectMetaIndex、generation、read-cache invalidation。</td>
+                            </tr>
+                            <tr>
+                                <td>对象缓存失效</td>
+                                <td>写入、删除、完成 MPU 改变可见版本后，失效 read-cache 旧切片。</td>
+                                <td>DS 内部 ReadCacheInvalidator，必要时跨 DS 调用 InvalidateObjectCache。</td>
+                            </tr>
+                            <tr>
+                                <td>文件 close-to-open</td>
+                                <td>写入对其他客户端的可见点优先定义在 Flush/Fsync/Release 或同目录 Rename 后。</td>
+                                <td>FS metadata WAL、extent commit、rename 原子语义。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </section>
+
+            <section id="ops" class="chapter">
+                <div class="eyebrow">API and Operations</div>
+                <h2>7. API 与运维</h2>
+
+                <div id="ops-admin" class="section-block">
+                    <h3>管理与诊断接口</h3>
+                    <p>控制面通过 MetaServer 管理 namespace、slot migration、capacity、usage、manifest recovery 和 route resolve；数据面通过 DS admin service、S3SubSystem admin service 和 FSSubsystem service 暴露健康、使用量、维护、诊断和文件元数据接口。</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>接口族</th>
+                                <th>代表能力</th>
+                                <th>使用场景</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>MetaServer S3 Admin</td>
+                                <td>Create/List/Delete Namespace、SlotMigrate、ResolveObjectRoute、ListS3NamespaceSpaceUsage</td>
+                                <td>创建加速空间、查看容量、迁移 slot、排查对象路由。</td>
+                            </tr>
+                            <tr>
+                                <td>S3SubSystem Admin</td>
+                                <td>GetNamespaceUsage、Enter/Leave Maintenance、ListSlotRecoveryStatus、DiagnoseObjectRange</td>
+                                <td>节点级维护、恢复状态检查、对象范围诊断。</td>
+                            </tr>
+                            <tr>
+                                <td>ChunkSubSystem Client</td>
+                                <td>AllocateChunk、AppendChunk、ReadChunk、SealChunk、RepairChunkReplica</td>
+                                <td>内部数据路径和副本修复，不直接暴露给普通用户。</td>
+                            </tr>
+                            <tr>
+                                <td>FSSubsystem Service</td>
+                                <td>Lookup、CreateFile、Readdir、GetDirectoryLayout、RecoverInodeBucket</td>
+                                <td>文件语义、目录布局、inode bucket 恢复。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="ops-monitoring" class="section-block">
+                    <h3>监控指标</h3>
+                    <p>KyteStore 使用 brpc metrics 暴露 MS/DS 指标，并提供 Prometheus + Grafana 方案。MetaServer 还提供 namespace 级空间用量查询，用于控制台和运维脚本展示用户视角容量、逻辑占用、副本因子、chunk 摘要和估算边界。</p>
+                </div>
+
+                <div id="ops-deploy" class="section-block">
+                    <h3>部署形态</h3>
+                    <p>KyteStore 单个二进制可以通过 <code>--start_mode=metaserver</code> 或 <code>--start_mode=dataserver</code> 启动不同角色。最小单机模拟集群适合 PoC、功能验证和 benchmark；生产部署建议拆分 MetaServer、DataServer、本地 SSD、FoundationDB 和监控栈。</p>
+                </div>
+            </section>
+
+            <section id="performance" class="chapter">
+                <div class="eyebrow">Performance</div>
+                <h2>8. 性能与调优</h2>
+
+                <div id="performance-object" class="section-block">
+                    <h3>对象性能</h3>
+                    <p>当前官网首页已经展示对象加速的基础吞吐、基础延迟和 TPCDS 数据。代码侧性能分析进一步显示，64KB GET 的 FE HTTP E2E 延迟可以拆为 FE、SDK、DS local MetaKV、read_chunk 和 response path 等阶段；高并发 PUT 的瓶颈更多受本地盘 64KB direct append 能力影响。</p>
+                </div>
+
+                <div id="performance-file" class="section-block">
+                    <h3>文件性能</h3>
+                    <p>文件加速性能将按 metadata 与 data read/write 分开度量。metadata 侧重点包括 Lookup、CreateFile、Readdir、Rename/Unlink 和 inode bucket recovery；data 侧重点包括 dataset 顺序读取、checkpoint 顺序写、close-to-open 可见点和 extent commit。</p>
+                </div>
+
+                <div id="performance-tuning" class="section-block">
+                    <h3>调优方向</h3>
+                    <ul>
+                        <li>对象读路径关注 slice_length、cache hit ratio、LocalMetaKV 延迟、本地 SSD 读延迟和远端 S3 回源耗时。</li>
+                        <li>对象写路径关注 write-buffer 副本数、本地盘 O_DIRECT append 能力、chunk soft limit、异步 S3 sync backlog。</li>
+                        <li>文件路径关注目录 bucket 数、inode bucket owner 分布、metadata WAL group commit、checkpoint 周期和 list fanout。</li>
+                        <li>集群维度关注 slot owner 均衡、topo_version 收敛、DS 维护窗口、missing replica count 和 namespace capacity 水位线。</li>
+                    </ul>
+                </div>
+            </section>
+
+            <div class="footer-note">本白皮书第一版基于当前官网资料和 KyteStore dev 分支文档、proto 与核心模块结构整理。后续版本会继续补充文件加速实测数据、部署参数、运维命令示例和更完整的 API 参考。</div>
         </main>
     </div>
 </body>
