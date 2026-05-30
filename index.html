@@ -84,6 +84,7 @@
             font-weight: bold;
             letter-spacing: 2px;
             color: var(--text-primary);
+            text-decoration: none;
         }
 
         .logo span {
@@ -676,12 +677,13 @@
     <header>
         <div class="container">
             <div class="header-content">
-                <div class="logo">Kyte<span>Store</span></div>
+                <a class="logo" href="index.html">Kyte<span>Store</span></a>
                 <nav>
-                    <a href="#architecture" data-i18n="nav-architecture">系统架构</a>
-                    <a href="#features" data-i18n="nav-features">核心功能</a>
-                    <a href="#performance" data-i18n="nav-performance">性能指标</a>
-                    <a href="#deployment" data-i18n="nav-deployment">推荐配置</a>
+                    <a href="index.html" data-i18n="nav-home">首页</a>
+                    <a href="#architecture" data-i18n="nav-architecture">架构</a>
+                    <a href="#features" data-i18n="nav-features">功能</a>
+                    <a href="#performance" data-i18n="nav-performance">性能</a>
+                    <a href="#deployment" data-i18n="nav-deployment">配置</a>
                     <a href="whitepaper.html" data-i18n="nav-docs">文档</a>
                     <a href="blog.html" data-i18n="nav-blog">博客</a>
                     <a href="#contact" data-i18n="nav-contact">联系我们</a>
@@ -1058,13 +1060,14 @@
     (function () {
         var T = {
             en: {
-                'nav-architecture': 'Architecture',
-                'nav-features': 'Core Features',
-                'nav-performance': 'Performance',
-                'nav-deployment': 'Deployment',
-                'nav-docs': 'Docs',
-                'nav-blog': 'Blog',
-                'nav-contact': 'Contact',
+                'nav-home': 'HOME',
+                'nav-architecture': 'DESIGN',
+                'nav-features': 'FEATURES',
+                'nav-performance': 'BENCHMARK',
+                'nav-deployment': null,
+                'nav-docs': 'DOCS',
+                'nav-blog': 'BLOG',
+                'nav-contact': 'CONTACT',
                 'lang-toggle': '中',
                 'hero-h1': 'One data foundation for<br><span class="highlight">S3 and POSIX access</span>',
                 'features-label': 'Core Features',
@@ -1205,10 +1208,11 @@
                 'footer-p': '&copy; 2024 KyteStore. High-Performance Object and File Storage Acceleration. JiZhi Innovation Technology Limit.'
             },
             zh: {
-                'nav-architecture': '系统架构',
-                'nav-features': '核心功能',
-                'nav-performance': '性能指标',
-                'nav-deployment': '推荐配置',
+                'nav-home': '首页',
+                'nav-architecture': '架构',
+                'nav-features': '功能',
+                'nav-performance': '性能',
+                'nav-deployment': '配置',
                 'nav-docs': '文档',
                 'nav-blog': '博客',
                 'nav-contact': '联系我们',
@@ -1360,7 +1364,12 @@
             document.querySelectorAll('[data-i18n]').forEach(function (el) {
                 var key = el.getAttribute('data-i18n');
                 if (t[key] !== undefined) {
-                    el.innerHTML = t[key];
+                    if (t[key] === null) {
+                        el.style.display = 'none';
+                    } else {
+                        el.style.display = '';
+                        el.innerHTML = t[key];
+                    }
                 }
             });
             document.documentElement.setAttribute('lang', l === 'zh' ? 'zh-CN' : 'en');

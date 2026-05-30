@@ -79,9 +79,16 @@
         }
 
         .brand {
+            display: inline-block;
+            color: var(--text);
             margin-bottom: 6px;
             font-size: 24px;
             letter-spacing: 0.04em;
+            text-decoration: none;
+        }
+
+        .brand:hover {
+            text-decoration: none;
         }
 
         .brand span {
@@ -441,9 +448,9 @@
 <body>
     <div class="docs-shell">
         <aside class="sidebar">
-            <div class="brand">Kyte<span>Store</span></div>
+            <a class="brand" href="index.html">Kyte<span>Store</span></a>
             <div class="side-meta">Technical Whitepaper</div>
-            <a class="back" href="index.html">返回首页</a>
+            <a class="back" href="index.html">首页</a>
             <nav class="toc" aria-label="技术白皮书目录">
                 <div class="toc-group">
                     <a class="toc-title" href="#overview">1. 概览</a>
