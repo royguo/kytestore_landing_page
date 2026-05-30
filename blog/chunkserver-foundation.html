@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>统一 ChunkServer 底座 - KyteStore 博客</title>
+    <meta name="description" content="解释 KyteStore 如何通过统一 ChunkServer 底座支撑对象协议与文件语义。">
+    <meta name="keywords" content="KyteStore, ChunkServer, S3 Subsystem, FS Subsystem, 对象协议, 文件语义, 存储架构, AI 存储, 湖仓存储, 本地 SSD 缓存">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://kytestore.com/blog/chunkserver-foundation">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="KyteStore">
+    <meta property="og:title" content="统一 ChunkServer 底座：对象与文件访问为何可以共用一条数据路径">
+    <meta property="og:description" content="解释 KyteStore 如何在同一套 ChunkServer 数据层之上承载 S3 Subsystem 与 FS Subsystem。">
+    <meta property="og:url" content="https://kytestore.com/blog/chunkserver-foundation">
+    <meta property="og:image" content="https://kytestore.com/assets/images/architecture.jpg">
+    <meta property="article:published_time" content="2026-05-30">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg">
+    <style>
+        :root {
+            --bg-primary: #FDFCF9;
+            --bg-secondary: #F7F7F5;
+            --bg-tertiary: #F0EFEB;
+            --text-primary: #1F1F1F;
+            --text-secondary: #3C3C3C;
+            --text-muted: #6B6B6B;
+            --accent: #2F5F8F;
+            --accent-dim: #1E4A6E;
+            --border: #E4E4E2;
+            --border-strong: #C4C0B8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-size: 17px;
+            line-height: 1.78;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            border-bottom: 3px double var(--border-strong);
+            padding: 20px 0;
+            background: rgba(253, 252, 249, 0.96);
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            color: var(--text-primary);
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        nav a {
+            margin-left: 28px;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            letter-spacing: 0.12em;
+            text-decoration: none;
+            text-transform: uppercase;
+        }
+
+        nav a:hover,
+        nav a.active {
+            color: var(--accent);
+        }
+
+        .article-shell {
+            padding: 72px 0 96px;
+        }
+
+        .article {
+            max-width: 860px;
+        }
+
+        .breadcrumb {
+            display: inline-block;
+            margin-bottom: 28px;
+            color: var(--accent);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            letter-spacing: 0.1em;
+            text-decoration: none;
+            text-transform: uppercase;
+        }
+
+        .meta {
+            margin-bottom: 16px;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin-bottom: 24px;
+            color: var(--text-primary);
+            font-size: 44px;
+            font-weight: normal;
+            line-height: 1.18;
+            overflow-wrap: anywhere;
+        }
+
+        .lead {
+            margin-bottom: 36px;
+            color: var(--text-secondary);
+            font-size: 20px;
+            overflow-wrap: anywhere;
+        }
+
+        h2 {
+            margin: 42px 0 14px;
+            color: var(--text-primary);
+            font-size: 28px;
+            font-weight: normal;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+        }
+
+        p {
+            margin-bottom: 18px;
+            color: var(--text-secondary);
+            overflow-wrap: anywhere;
+        }
+
+        ul {
+            margin: 0 0 22px 1.3em;
+            color: var(--text-secondary);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .note {
+            margin: 30px 0;
+            padding: 18px 20px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        footer {
+            border-top: 3px double var(--border-strong);
+            padding: 36px 0;
+            text-align: center;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 20px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            nav {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+            }
+
+            nav a {
+                margin-left: 0;
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+
+            .article-shell {
+                padding: 52px 0 72px;
+            }
+
+            h1 {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a class="logo" href="../index.html">Kyte<span>Store</span></a>
+                <nav aria-label="主导航">
+                    <a href="../index.html#architecture">系统架构</a>
+                    <a href="../index.html#features">核心功能</a>
+                    <a href="../index.html#performance">性能指标</a>
+                    <a href="../index.html#deployment">推荐配置</a>
+                    <a href="../whitepaper.html">文档</a>
+                    <a class="active" href="../blog.html">博客</a>
+                    <a href="../index.html#contact">联系我们</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="article-shell">
+        <div class="container">
+            <article class="article">
+                <a class="breadcrumb" href="../blog.html">返回博客列表</a>
+                <div class="meta">Architecture · 2026-05-30</div>
+                <h1>统一 ChunkServer 底座：对象与文件访问为何可以共用一条数据路径</h1>
+                <p class="lead">KyteStore 的核心判断是：对象协议和文件语义在用户入口上不同，但在高性能读写、多副本、本地缓存和冷热分离这些能力上，可以共享同一套数据底座。</p>
+
+                <h2>从协议差异中抽出共性</h2>
+                <p>湖仓系统更习惯 S3 兼容对象协议，AI 训练和推理任务更依赖 POSIX/FUSE 文件语义。两类入口看起来差异很大，但真正消耗系统资源的是本地 SSD 读写、chunk 分配、数据副本、后台回源和失效回收。KyteStore 把这些共性放在 ChunkServer 中，避免每一种协议都重复实现一套数据路径。</p>
+                <p>S3 Subsystem 负责对象语义、对象元数据和 S3 API 对接；FS Subsystem 负责目录、inode、extent 和文件可见性。它们之下都使用 ChunkSubSystem 读写本地 chunk，并通过 MetaServer 获取 namespace、slot、owner 和 chunk placement。</p>
+
+                <h2>ChunkServer 承担什么</h2>
+                <ul>
+                    <li>统一管理 chunk 生命周期，包括创建、追加、读取、seal、删除和修复。</li>
+                    <li>在本地 SSD 上承载热数据，让高频访问不必每次回源远端对象存储。</li>
+                    <li>提供多副本和 owner fencing，减少单节点故障对业务可见性的影响。</li>
+                    <li>把冷热分离、容量水位和回收策略沉到数据层，使上层协议更轻。</li>
+                </ul>
+
+                <h2>为什么这对用户有价值</h2>
+                <p>用户不需要在对象协议和文件协议之间二选一。湖仓查询可以继续使用 S3 Endpoint，AI 任务可以继续使用文件路径；底层仍然共享本地加速、容量扩展和远端 S3/COS/OSS 回源能力。这种结构也让未来扩展 HDFS、SDK 或其他接入协议时，有明确的复用边界。</p>
+
+                <div class="note">这也是 KyteStore 后续性能数据会分为对象加速和文件加速的原因：入口语义不同，benchmark 应该分开观察；但底层的 ChunkServer 能力需要统一设计和统一演进。</div>
+            </article>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">&copy; 2024 KyteStore. 高性能对象与文件存储加速。北京集智创新科技有限公司。</div>
+    </footer>
+</body>
+</html>

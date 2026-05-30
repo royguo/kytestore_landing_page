@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KyteStore 技术白皮书</title>
     <meta name="description" content="KyteStore 面向湖仓系统和 AI 训推的透明加速存储底座技术白皮书">
+    <meta name="keywords" content="KyteStore 技术白皮书, KyteStore 架构, ChunkServer, S3 Subsystem, FS Subsystem, S3 加速, POSIX 文件语义, Write Buffer, 读缓存, 多副本, 对象存储加速, AI 存储, 湖仓存储">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://kytestore.com/whitepaper">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="KyteStore">
+    <meta property="og:title" content="KyteStore 技术白皮书">
+    <meta property="og:description" content="系统解释 KyteStore 的整体架构、对象加速、文件加速、ChunkServer 底座、一致性、高可用与 API 运维。">
+    <meta property="og:url" content="https://kytestore.com/whitepaper">
+    <meta property="og:image" content="https://kytestore.com/assets/images/architecture.jpg">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
     <style>
         :root {
@@ -111,11 +122,24 @@
         }
 
         .back {
-            display: inline-block;
-            margin-top: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+            margin-top: 18px;
+            border: 1px solid var(--accent-warm);
+            background: #fff8ef;
             color: var(--accent-warm);
             font-family: Arial, Helvetica, sans-serif;
             font-size: 13px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .back:hover {
+            background: var(--accent-warm);
+            color: #fff;
+            text-decoration: none;
         }
 
         main {
@@ -419,6 +443,7 @@
         <aside class="sidebar">
             <div class="brand">Kyte<span>Store</span></div>
             <div class="side-meta">Technical Whitepaper</div>
+            <a class="back" href="index.html">返回首页</a>
             <nav class="toc" aria-label="技术白皮书目录">
                 <div class="toc-group">
                     <a class="toc-title" href="#overview">1. 概览</a>
@@ -470,7 +495,6 @@
                     <a class="toc-child" href="#performance-tuning">调优方向</a>
                 </div>
             </nav>
-            <a class="back" href="index.html">返回首页</a>
         </aside>
 
         <main>

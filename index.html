@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KyteStore - High-Performance Object and File Storage Acceleration</title>
+    <meta name="description" content="KyteStore 是面向湖仓系统和 AI 训练推理的透明加速存储底座，统一 S3 兼容对象协议、POSIX 文件语义、本地 SSD 缓存、ChunkServer 多副本与远端对象存储回源。">
+    <meta name="keywords" content="KyteStore, S3 加速, S3 兼容存储, POSIX 文件语义, AI 训练存储, AI 推理存储, 湖仓系统存储, 对象存储加速, 云存储加速, ChunkServer, 文件存储加速, lakehouse storage, AI storage acceleration, object storage cache, S3 compatible storage, POSIX storage">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://kytestore.com/">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="KyteStore">
+    <meta property="og:title" content="KyteStore - 湖仓系统和 AI 训推透明加速存储底座">
+    <meta property="og:description" content="统一 S3 兼容对象协议、POSIX 文件语义、本地 SSD 缓存、ChunkServer 多副本与远端对象存储回源。">
+    <meta property="og:url" content="https://kytestore.com/">
+    <meta property="og:image" content="https://kytestore.com/assets/images/ecosystem.jpg">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
     <link rel="apple-touch-icon" href="assets/images/favicon.svg">
     <style>
@@ -29,24 +41,36 @@
             box-sizing: border-box;
         }
 
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 96px;
+        }
+
         body {
             font-family: Georgia, "Times New Roman", Times, serif;
             background-color: var(--bg-primary);
             color: var(--text-primary);
             line-height: 1.7;
             font-size: 17px;
+            overflow-x: hidden;
         }
 
         .container {
+            width: 100%;
             max-width: 1100px;
             margin: 0 auto;
             padding: 0 40px;
         }
 
         header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
             border-bottom: 3px double var(--border-strong);
             padding: 20px 0;
-            margin-bottom: 64px;
+            margin-bottom: 0;
+            background: rgba(253, 252, 249, 0.96);
+            backdrop-filter: blur(10px);
         }
 
         .header-content {
@@ -69,7 +93,7 @@
         nav a {
             color: var(--text-muted);
             text-decoration: none;
-            margin-left: 40px;
+            margin-left: 28px;
             font-size: 13px;
             letter-spacing: 0.12em;
             text-transform: uppercase;
@@ -83,7 +107,7 @@
 
         .hero {
             text-align: center;
-            padding: 72px 0 80px;
+            padding: 0 0 80px;
             border-bottom: 1px solid var(--border);
         }
 
@@ -94,6 +118,7 @@
             margin-bottom: 28px;
             line-height: 1.12;
             color: var(--text-primary);
+            overflow-wrap: anywhere;
         }
 
         .hero h1 .highlight {
@@ -109,34 +134,6 @@
             display: block;
             border: 1px solid var(--border);
             box-shadow: 0 4px 28px rgba(31, 31, 31, 0.07);
-        }
-
-        .hero-actions {
-            display: flex;
-            justify-content: center;
-            margin: 28px 0 0;
-        }
-
-        .hero-action {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 42px;
-            padding: 0 22px;
-            border: 1px solid var(--accent);
-            background: var(--accent);
-            color: #fff;
-            text-decoration: none;
-            font-size: 13px;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            font-family: Arial, Helvetica, sans-serif;
-            transition: background-color 0.2s, border-color 0.2s;
-        }
-
-        .hero-action:hover {
-            background: var(--accent-dim);
-            border-color: var(--accent-dim);
         }
 
         .hero-caption {
@@ -168,12 +165,14 @@
             margin-bottom: 24px;
             line-height: 1.2;
             color: var(--text-primary);
+            overflow-wrap: anywhere;
         }
 
         .section p {
             color: var(--text-secondary);
             max-width: 700px;
             margin-bottom: 20px;
+            overflow-wrap: anywhere;
         }
 
         .features-grid {
@@ -522,7 +521,7 @@
             border: 1px solid var(--border-strong);
             color: var(--text-muted);
             cursor: pointer;
-            margin-left: 40px;
+            margin-left: 28px;
             font-size: 11px;
             letter-spacing: 0.12em;
             font-family: Arial, Helvetica, sans-serif;
@@ -566,7 +565,7 @@
             }
 
             .hero {
-                padding: 48px 0 56px;
+                padding: 0 0 56px;
             }
 
             .hero h1 {
@@ -683,6 +682,8 @@
                     <a href="#features" data-i18n="nav-features">核心功能</a>
                     <a href="#performance" data-i18n="nav-performance">性能指标</a>
                     <a href="#deployment" data-i18n="nav-deployment">推荐配置</a>
+                    <a href="whitepaper.html" data-i18n="nav-docs">文档</a>
+                    <a href="blog.html" data-i18n="nav-blog">博客</a>
                     <a href="#contact" data-i18n="nav-contact">联系我们</a>
                     <button id="lang-toggle" data-i18n="lang-toggle" onclick="toggleLang()">English</button>
                 </nav>
@@ -694,9 +695,6 @@
         <div class="container">
             <h1 data-i18n="hero-h1">湖仓系统 和 AI 训推<br><span class="highlight">透明加速存储底座</span></h1>
             <img class="hero-image" src="assets/images/ecosystem.jpg" width="1254" height="1254" alt="KyteStore ecosystem: lakehouse systems use S3 access, AI systems use POSIX access, and both share a unified ChunkServer with object storage backing" decoding="async" fetchpriority="high">
-            <div class="hero-actions">
-                <a class="hero-action" href="whitepaper.html" target="_blank" rel="noopener" data-i18n="whitepaper-button">技术白皮书</a>
-            </div>
         </div>
     </section>
 
@@ -1064,10 +1062,11 @@
                 'nav-features': 'Core Features',
                 'nav-performance': 'Performance',
                 'nav-deployment': 'Deployment',
+                'nav-docs': 'Docs',
+                'nav-blog': 'Blog',
                 'nav-contact': 'Contact',
                 'lang-toggle': '中文',
                 'hero-h1': 'One data foundation for<br><span class="highlight">S3 and POSIX access</span>',
-                'whitepaper-button': 'Technical Whitepaper',
                 'features-label': 'Core Features',
                 'features-h2': 'From a Unified Data Foundation to Multi-Protocol Access',
                 'features-desc': 'KyteStore separates the data path, hot/cold tiering, reliability, and protocol access. ChunkServer provides the shared foundation; upper subsystems provide S3, POSIX, and high-performance metadata access.',
@@ -1210,10 +1209,11 @@
                 'nav-features': '核心功能',
                 'nav-performance': '性能指标',
                 'nav-deployment': '推荐配置',
+                'nav-docs': '文档',
+                'nav-blog': '博客',
                 'nav-contact': '联系我们',
                 'lang-toggle': 'English',
                 'hero-h1': '湖仓系统 和 AI 训推<br><span class="highlight">透明加速存储底座</span>',
-                'whitepaper-button': '技术白皮书',
                 'features-label': '核心功能',
                 'features-h2': '从统一数据底座到多协议接入',
                 'features-desc': 'KyteStore 将数据路径、冷热分离、可靠性能力和上层协议接入解耦：ChunkServer 负责统一的数据底座，上层子系统负责 S3、POSIX 等客户接入与高性能元数据。',

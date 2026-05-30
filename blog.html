@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KyteStore 博客</title>
+    <meta name="description" content="KyteStore 技术博客，记录湖仓系统、AI 训推、S3 与 POSIX 加速相关的架构思考。">
+    <meta name="keywords" content="KyteStore 博客, S3 加速博客, POSIX 文件系统, AI 训练存储, 湖仓系统, ChunkServer, Write Buffer, FS Subsystem, 对象存储缓存, 云存储加速">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://kytestore.com/blog">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="KyteStore">
+    <meta property="og:title" content="KyteStore 博客">
+    <meta property="og:description" content="记录 KyteStore 在湖仓系统、AI 训推、S3 与 POSIX 加速方向的架构思考。">
+    <meta property="og:url" content="https://kytestore.com/blog">
+    <meta property="og:image" content="https://kytestore.com/assets/images/ecosystem.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+    <style>
+        :root {
+            --bg-primary: #FDFCF9;
+            --bg-secondary: #F7F7F5;
+            --bg-tertiary: #F0EFEB;
+            --text-primary: #1F1F1F;
+            --text-secondary: #3C3C3C;
+            --text-muted: #6B6B6B;
+            --accent: #2F5F8F;
+            --accent-dim: #1E4A6E;
+            --border: #E4E4E2;
+            --border-strong: #C4C0B8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-size: 17px;
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            border-bottom: 3px double var(--border-strong);
+            padding: 20px 0;
+            background: rgba(253, 252, 249, 0.96);
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            color: var(--text-primary);
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        nav a {
+            margin-left: 28px;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            letter-spacing: 0.12em;
+            text-decoration: none;
+            text-transform: uppercase;
+        }
+
+        nav a:hover,
+        nav a.active {
+            color: var(--accent);
+        }
+
+        .page-hero {
+            padding: 72px 0 52px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-title {
+            margin-bottom: 24px;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            max-width: 780px;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            font-size: 48px;
+            font-weight: normal;
+            line-height: 1.15;
+            overflow-wrap: anywhere;
+        }
+
+        .intro {
+            max-width: 760px;
+            color: var(--text-secondary);
+            font-size: 18px;
+            overflow-wrap: anywhere;
+        }
+
+        .blog-list {
+            padding: 36px 0 88px;
+        }
+
+        .blog-row {
+            display: grid;
+            grid-template-columns: 180px minmax(0, 1fr);
+            gap: 28px;
+            padding: 28px 0;
+            border-bottom: 1px solid var(--border);
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .blog-row:hover h2 {
+            color: var(--accent);
+        }
+
+        .blog-meta {
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .blog-row h2 {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-size: 26px;
+            font-weight: normal;
+            line-height: 1.25;
+            transition: color 0.2s;
+            overflow-wrap: anywhere;
+        }
+
+        .blog-row p {
+            max-width: 760px;
+            color: var(--text-secondary);
+            font-size: 16px;
+            overflow-wrap: anywhere;
+        }
+
+        footer {
+            border-top: 3px double var(--border-strong);
+            padding: 36px 0;
+            text-align: center;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 20px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            nav {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+            }
+
+            nav a {
+                margin-left: 0;
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+
+            .page-hero {
+                padding: 52px 0 40px;
+            }
+
+            h1 {
+                font-size: 34px;
+            }
+
+            .blog-row {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .blog-row h2 {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a class="logo" href="index.html">Kyte<span>Store</span></a>
+                <nav aria-label="主导航">
+                    <a href="index.html#architecture">系统架构</a>
+                    <a href="index.html#features">核心功能</a>
+                    <a href="index.html#performance">性能指标</a>
+                    <a href="index.html#deployment">推荐配置</a>
+                    <a href="whitepaper.html">文档</a>
+                    <a class="active" href="blog.html" aria-current="page">博客</a>
+                    <a href="index.html#contact">联系我们</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="page-hero">
+            <div class="container">
+                <div class="section-title">Blog</div>
+                <h1>KyteStore 博客</h1>
+                <p class="intro">面向湖仓系统、AI 训推和云对象存储加速场景，记录 KyteStore 在架构、数据路径、文件语义与工程实践上的思考。</p>
+            </div>
+        </section>
+
+        <section class="blog-list" aria-label="博客列表">
+            <div class="container">
+                <a class="blog-row" href="blog/chunkserver-foundation.html">
+                    <div class="blog-meta">Architecture · 2026-05-30</div>
+                    <div>
+                        <h2>统一 ChunkServer 底座：对象与文件访问为何可以共用一条数据路径</h2>
+                        <p>解释 KyteStore 如何在同一套 ChunkServer 数据层之上承载 S3 Subsystem 与 FS Subsystem，并在性能、扩展性和冷热分离之间取得平衡。</p>
+                    </div>
+                </a>
+
+                <a class="blog-row" href="blog/write-buffer.html">
+                    <div class="blog-meta">Object Path · 2026-05-30</div>
+                    <div>
+                        <h2>Write Buffer 如何让对象写入先落本地再异步回源</h2>
+                        <p>拆解对象写入路径中的本地多副本、Seal 可见性、后台 S3 同步和读后写一致性，说明 KyteStore 写加速的核心语义。</p>
+                    </div>
+                </a>
+
+                <a class="blog-row" href="blog/fs-subsystem.html">
+                    <div class="blog-meta">File Path · 2026-05-30</div>
+                    <div>
+                        <h2>FS Subsystem 的定位：面向 AI 工作负载的文件语义加速</h2>
+                        <p>介绍 KyteStore 文件加速的设计边界，为什么优先服务数据集读取、checkpoint 写入、目录遍历和 close-to-open 可见性。</p>
+                    </div>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">&copy; 2024 KyteStore. 高性能对象与文件存储加速。北京集智创新科技有限公司。</div>
+    </footer>
+</body>
+</html>
