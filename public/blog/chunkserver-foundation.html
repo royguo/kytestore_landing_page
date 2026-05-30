@@ -97,6 +97,25 @@
             color: var(--accent);
         }
 
+        #lang-toggle {
+            background: none;
+            border: 1px solid var(--border-strong);
+            color: var(--text-muted);
+            cursor: pointer;
+            margin-left: 28px;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 4px 10px;
+            transition: color 0.2s, border-color 0.2s;
+            vertical-align: middle;
+        }
+
+        #lang-toggle:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
         .article-shell {
             padding: 72px 0 96px;
         }
@@ -205,6 +224,12 @@
                 font-size: 11px;
             }
 
+            #lang-toggle {
+                margin-left: 0;
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+
             .article-shell {
                 padding: 52px 0 72px;
             }
@@ -221,13 +246,14 @@
             <div class="header-content">
                 <a class="logo" href="../index.html">Kyte<span>Store</span></a>
                 <nav aria-label="主导航">
-                    <a href="../index.html#architecture">系统架构</a>
-                    <a href="../index.html#features">核心功能</a>
-                    <a href="../index.html#performance">性能指标</a>
-                    <a href="../index.html#deployment">推荐配置</a>
-                    <a href="../whitepaper.html">文档</a>
-                    <a class="active" href="../blog.html">博客</a>
-                    <a href="../index.html#contact">联系我们</a>
+                    <a href="../index.html#architecture" data-i18n="nav-architecture">系统架构</a>
+                    <a href="../index.html#features" data-i18n="nav-features">核心功能</a>
+                    <a href="../index.html#performance" data-i18n="nav-performance">性能指标</a>
+                    <a href="../index.html#deployment" data-i18n="nav-deployment">推荐配置</a>
+                    <a href="../whitepaper.html" data-i18n="nav-docs">文档</a>
+                    <a class="active" href="../blog.html" data-i18n="nav-blog">博客</a>
+                    <a href="../index.html#contact" data-i18n="nav-contact">联系我们</a>
+                    <button id="lang-toggle" data-i18n="lang-toggle" onclick="toggleLang()">EN</button>
                 </nav>
             </div>
         </div>
@@ -236,33 +262,115 @@
     <main class="article-shell">
         <div class="container">
             <article class="article">
-                <a class="breadcrumb" href="../blog.html">返回博客列表</a>
-                <div class="meta">Architecture · 2026-05-30</div>
-                <h1>统一 ChunkServer 底座：对象与文件访问为何可以共用一条数据路径</h1>
-                <p class="lead">KyteStore 的核心判断是：对象协议和文件语义在用户入口上不同，但在高性能读写、多副本、本地缓存和冷热分离这些能力上，可以共享同一套数据底座。</p>
+                <a class="breadcrumb" href="../blog.html" data-i18n="breadcrumb">返回博客列表</a>
+                <div class="meta"><span data-i18n="category">架构</span> · 2026-05-30</div>
+                <h1 data-i18n="post-title">统一 ChunkServer 底座：对象与文件访问为何可以共用一条数据路径</h1>
+                <p class="lead" data-i18n="lead">KyteStore 的核心判断是：对象协议和文件语义在用户入口上不同，但在高性能读写、多副本、本地缓存和冷热分离这些能力上，可以共享同一套数据底座。</p>
 
-                <h2>从协议差异中抽出共性</h2>
-                <p>湖仓系统更习惯 S3 兼容对象协议，AI 训练和推理任务更依赖 POSIX/FUSE 文件语义。两类入口看起来差异很大，但真正消耗系统资源的是本地 SSD 读写、chunk 分配、数据副本、后台回源和失效回收。KyteStore 把这些共性放在 ChunkServer 中，避免每一种协议都重复实现一套数据路径。</p>
-                <p>S3 Subsystem 负责对象语义、对象元数据和 S3 API 对接；FS Subsystem 负责目录、inode、extent 和文件可见性。它们之下都使用 ChunkSubSystem 读写本地 chunk，并通过 MetaServer 获取 namespace、slot、owner 和 chunk placement。</p>
+                <h2 data-i18n="h2-1">从协议差异中抽出共性</h2>
+                <p data-i18n="p1">湖仓系统更习惯 S3 兼容对象协议，AI 训练和推理任务更依赖 POSIX/FUSE 文件语义。两类入口看起来差异很大，但真正消耗系统资源的是本地 SSD 读写、chunk 分配、数据副本、后台回源和失效回收。KyteStore 把这些共性放在 ChunkServer 中，避免每一种协议都重复实现一套数据路径。</p>
+                <p data-i18n="p2">S3 Subsystem 负责对象语义、对象元数据和 S3 API 对接；FS Subsystem 负责目录、inode、extent 和文件可见性。它们之下都使用 ChunkSubSystem 读写本地 chunk，并通过 MetaServer 获取 namespace、slot、owner 和 chunk placement。</p>
 
-                <h2>ChunkServer 承担什么</h2>
+                <h2 data-i18n="h2-2">ChunkServer 承担什么</h2>
                 <ul>
-                    <li>统一管理 chunk 生命周期，包括创建、追加、读取、seal、删除和修复。</li>
-                    <li>在本地 SSD 上承载热数据，让高频访问不必每次回源远端对象存储。</li>
-                    <li>提供多副本和 owner fencing，减少单节点故障对业务可见性的影响。</li>
-                    <li>把冷热分离、容量水位和回收策略沉到数据层，使上层协议更轻。</li>
+                    <li data-i18n="li1">统一管理 chunk 生命周期，包括创建、追加、读取、seal、删除和修复。</li>
+                    <li data-i18n="li2">在本地 SSD 上承载热数据，让高频访问不必每次回源远端对象存储。</li>
+                    <li data-i18n="li3">提供多副本和 owner fencing，减少单节点故障对业务可见性的影响。</li>
+                    <li data-i18n="li4">把冷热分离、容量水位和回收策略沉到数据层，使上层协议更轻。</li>
                 </ul>
 
-                <h2>为什么这对用户有价值</h2>
-                <p>用户不需要在对象协议和文件协议之间二选一。湖仓查询可以继续使用 S3 Endpoint，AI 任务可以继续使用文件路径；底层仍然共享本地加速、容量扩展和远端 S3/COS/OSS 回源能力。这种结构也让未来扩展 HDFS、SDK 或其他接入协议时，有明确的复用边界。</p>
+                <h2 data-i18n="h2-3">为什么这对用户有价值</h2>
+                <p data-i18n="p3">用户不需要在对象协议和文件协议之间二选一。湖仓查询可以继续使用 S3 Endpoint，AI 任务可以继续使用文件路径；底层仍然共享本地加速、容量扩展和远端 S3/COS/OSS 回源能力。这种结构也让未来扩展 HDFS、SDK 或其他接入协议时，有明确的复用边界。</p>
 
-                <div class="note">这也是 KyteStore 后续性能数据会分为对象加速和文件加速的原因：入口语义不同，benchmark 应该分开观察；但底层的 ChunkServer 能力需要统一设计和统一演进。</div>
+                <div class="note" data-i18n="note">这也是 KyteStore 后续性能数据会分为对象加速和文件加速的原因：入口语义不同，benchmark 应该分开观察；但底层的 ChunkServer 能力需要统一设计和统一演进。</div>
             </article>
         </div>
     </main>
 
     <footer>
-        <div class="container">&copy; 2024 KyteStore. 高性能对象与文件存储加速。北京集智创新科技有限公司。</div>
+        <div class="container" data-i18n="footer-p">&copy; 2024 KyteStore. 高性能对象与文件存储加速。北京集智创新科技有限公司。</div>
     </footer>
+    <script>
+    (function () {
+        var T = {
+            en: {
+                'page-title': 'Unified ChunkServer Foundation - KyteStore Blog',
+                'nav-architecture': 'Architecture',
+                'nav-features': 'Core Features',
+                'nav-performance': 'Performance',
+                'nav-deployment': 'Deployment',
+                'nav-docs': 'Docs',
+                'nav-blog': 'Blog',
+                'nav-contact': 'Contact',
+                'lang-toggle': '中',
+                'breadcrumb': 'Back to Blog',
+                'category': 'Architecture',
+                'post-title': 'Unified ChunkServer Foundation: Why Object and File Access Can Share One Data Path',
+                'lead': 'KyteStore starts from a simple judgment: object protocols and file semantics differ at the user entry point, but they can share the same data foundation for high-performance reads and writes, replicas, local caching, and hot/cold tiering.',
+                'h2-1': 'Extracting Commonality from Protocol Differences',
+                'p1': 'Lakehouse systems usually prefer S3-compatible object protocols, while AI training and inference tasks rely more on POSIX/FUSE file semantics. The entry points look very different, but the expensive parts are local SSD reads and writes, chunk allocation, data replicas, background sync, and cache reclamation. KyteStore puts these common capabilities into ChunkServer so each protocol does not need to rebuild its own data path.',
+                'p2': 'S3 Subsystem owns object semantics, object metadata, and S3 API integration; FS Subsystem owns directories, inodes, extents, and file visibility. Both use ChunkSubSystem to read and write local chunks, and both use MetaServer for namespace, slot, owner, and chunk placement decisions.',
+                'h2-2': 'What ChunkServer Provides',
+                'li1': 'Unified chunk lifecycle management, including create, append, read, seal, delete, and repair.',
+                'li2': 'Hot data on local SSDs, so frequent access does not have to go back to remote object storage every time.',
+                'li3': 'Replicas and owner fencing to reduce the user-visible impact of single-node failures.',
+                'li4': 'Hot/cold tiering, capacity watermarks, and reclamation policies in the data layer, keeping upper protocols lighter.',
+                'h2-3': 'Why This Matters to Users',
+                'p3': 'Users do not have to choose between object protocols and file protocols. Lakehouse queries can keep using S3 endpoints, and AI jobs can keep using file paths. Underneath, both share local acceleration, capacity expansion, and S3/COS/OSS fallback. The same boundary also makes future protocols such as HDFS or SDK access easier to add.',
+                'note': 'This is also why KyteStore performance data is split into object acceleration and file acceleration: the entry semantics are different and benchmarks should be read separately, while the underlying ChunkServer capabilities are designed and evolved together.',
+                'footer-p': '&copy; 2024 KyteStore. High-Performance Object and File Storage Acceleration. JiZhi Innovation Technology Limit.'
+            },
+            zh: {
+                'page-title': '统一 ChunkServer 底座 - KyteStore 博客',
+                'nav-architecture': '系统架构',
+                'nav-features': '核心功能',
+                'nav-performance': '性能指标',
+                'nav-deployment': '推荐配置',
+                'nav-docs': '文档',
+                'nav-blog': '博客',
+                'nav-contact': '联系我们',
+                'lang-toggle': 'EN',
+                'breadcrumb': '返回博客列表',
+                'category': '架构',
+                'post-title': '统一 ChunkServer 底座：对象与文件访问为何可以共用一条数据路径',
+                'lead': 'KyteStore 的核心判断是：对象协议和文件语义在用户入口上不同，但在高性能读写、多副本、本地缓存和冷热分离这些能力上，可以共享同一套数据底座。',
+                'h2-1': '从协议差异中抽出共性',
+                'p1': '湖仓系统更习惯 S3 兼容对象协议，AI 训练和推理任务更依赖 POSIX/FUSE 文件语义。两类入口看起来差异很大，但真正消耗系统资源的是本地 SSD 读写、chunk 分配、数据副本、后台回源和失效回收。KyteStore 把这些共性放在 ChunkServer 中，避免每一种协议都重复实现一套数据路径。',
+                'p2': 'S3 Subsystem 负责对象语义、对象元数据和 S3 API 对接；FS Subsystem 负责目录、inode、extent 和文件可见性。它们之下都使用 ChunkSubSystem 读写本地 chunk，并通过 MetaServer 获取 namespace、slot、owner 和 chunk placement。',
+                'h2-2': 'ChunkServer 承担什么',
+                'li1': '统一管理 chunk 生命周期，包括创建、追加、读取、seal、删除和修复。',
+                'li2': '在本地 SSD 上承载热数据，让高频访问不必每次回源远端对象存储。',
+                'li3': '提供多副本和 owner fencing，减少单节点故障对业务可见性的影响。',
+                'li4': '把冷热分离、容量水位和回收策略沉到数据层，使上层协议更轻。',
+                'h2-3': '为什么这对用户有价值',
+                'p3': '用户不需要在对象协议和文件协议之间二选一。湖仓查询可以继续使用 S3 Endpoint，AI 任务可以继续使用文件路径；底层仍然共享本地加速、容量扩展和远端 S3/COS/OSS 回源能力。这种结构也让未来扩展 HDFS、SDK 或其他接入协议时，有明确的复用边界。',
+                'note': '这也是 KyteStore 后续性能数据会分为对象加速和文件加速的原因：入口语义不同，benchmark 应该分开观察；但底层的 ChunkServer 能力需要统一设计和统一演进。',
+                'footer-p': '&copy; 2024 KyteStore. 高性能对象与文件存储加速。北京集智创新科技有限公司。'
+            }
+        };
+
+        var lang = localStorage.getItem('ks-lang') || 'zh';
+
+        function applyLang(l) {
+            var t = T[l];
+            document.querySelectorAll('[data-i18n]').forEach(function (el) {
+                var key = el.getAttribute('data-i18n');
+                if (t[key] !== undefined) {
+                    el.innerHTML = t[key];
+                }
+            });
+            document.title = t['page-title'];
+            document.documentElement.setAttribute('lang', l === 'zh' ? 'zh-CN' : 'en');
+        }
+
+        window.toggleLang = function () {
+            lang = lang === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('ks-lang', lang);
+            applyLang(lang);
+        };
+
+        applyLang(lang);
+    }());
+    </script>
 </body>
 </html>
