@@ -360,6 +360,18 @@
             color: var(--text-primary);
         }
 
+        .performance-note {
+            max-width: 760px;
+            margin: -8px 0 0;
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .performance-note + .table-scroll {
+            margin-top: 18px;
+        }
+
         .performance-table {
             width: 100%;
             margin-top: 48px;
@@ -1130,24 +1142,55 @@
 
             <div class="performance-group">
                 <h3 data-i18n="perf-file-h3">文件加速性能</h3>
+                <p class="performance-note" data-i18n="file-meta-note">元数据的性能测试，采用的是单个 DS 节点实现，理论上多节点可以线性扩展，达到数百万 QPS</p>
 
                 <div class="table-scroll">
                     <table class="performance-table">
                         <caption data-i18n="file-meta-caption">元数据性能</caption>
                         <thead>
                             <tr>
-                                <th data-i18n="file-th-scenario">测试场景</th>
+                                <th data-i18n="file-th-op">OP（操作）</th>
                                 <th data-i18n="file-th-qps">QPS</th>
-                                <th data-i18n="file-th-latency">延迟</th>
-                                <th data-i18n="file-th-notes">备注</th>
+                                <th data-i18n="file-th-avg-us">avg_us</th>
+                                <th data-i18n="file-th-wal-p50">WAL p50_us</th>
+                                <th data-i18n="file-th-wal-p99">WAL p99_us</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td>CREATE</td>
-                                <td>360,000</td>
-                                <td>2.78us/File</td>
-                                <td data-i18n="file-meta-create-notes">32 访问线程，单 DS</td>
+                                <td>create</td>
+                                <td>379,324</td>
+                                <td>2.64</td>
+                                <td>2,114</td>
+                                <td>6,175</td>
+                            </tr>
+                            <tr>
+                                <td>unlink</td>
+                                <td>270,512</td>
+                                <td>3.70</td>
+                                <td>5,973</td>
+                                <td>12,690</td>
+                            </tr>
+                            <tr>
+                                <td>rename</td>
+                                <td>237,571</td>
+                                <td>4.21</td>
+                                <td>3,881</td>
+                                <td>13,024</td>
+                            </tr>
+                            <tr>
+                                <td>mkdir</td>
+                                <td>230,950</td>
+                                <td>4.33</td>
+                                <td>5,299</td>
+                                <td>13,327</td>
+                            </tr>
+                            <tr>
+                                <td>rmdir</td>
+                                <td>N/A</td>
+                                <td>N/A</td>
+                                <td>N/A</td>
+                                <td>N/A</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1407,13 +1450,16 @@
                 'file-th-status': 'Status',
                 'file-meta-caption': 'Metadata Performance',
                 'file-data-caption': 'Data Read/Write Performance',
+                'file-meta-note': 'Metadata performance is measured on a single DS node. In theory, multi-node deployments can scale linearly to millions of QPS.',
+                'file-th-op': 'OP',
                 'file-th-qps': 'QPS',
-                'file-th-latency': 'Latency',
+                'file-th-avg-us': 'avg_us',
+                'file-th-wal-p50': 'WAL p50_us',
+                'file-th-wal-p99': 'WAL p99_us',
                 'file-th-avg-lat': 'Avg Latency',
                 'file-th-notes': 'Notes',
                 'file-th-read-tp': 'Read Throughput',
                 'file-th-write-tp': 'Write Throughput',
-                'file-meta-create-notes': '32 access threads, single DS',
                 'file-row1-scenario': 'Sequential AI dataset reads',
                 'file-row1-path': 'Local SSD hot data + ChunkServer',
                 'file-row2-scenario': 'Small files and directory metadata',
@@ -1597,13 +1643,16 @@
                 'file-th-status': '状态',
                 'file-meta-caption': '元数据性能',
                 'file-data-caption': '数据读写性能',
+                'file-meta-note': '元数据的性能测试，采用的是单个 DS 节点实现，理论上多节点可以线性扩展，达到数百万 QPS',
+                'file-th-op': 'OP（操作）',
                 'file-th-qps': 'QPS',
-                'file-th-latency': '延迟',
+                'file-th-avg-us': 'avg_us',
+                'file-th-wal-p50': 'WAL p50_us',
+                'file-th-wal-p99': 'WAL p99_us',
                 'file-th-avg-lat': '平均延迟',
                 'file-th-notes': '备注',
                 'file-th-read-tp': '读吞吐',
                 'file-th-write-tp': '写吞吐',
-                'file-meta-create-notes': '32 访问线程，单 DS',
                 'file-row1-scenario': 'AI 数据集顺序读取',
                 'file-row1-path': 'Local SSD 热数据 + ChunkServer',
                 'file-row2-scenario': '小文件与目录元数据',
