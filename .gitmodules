@@ -1,4 +1,5 @@
 [submodule "KyteStore"]
 	path = KyteStore
-	url = https://github.com/royguo/KyteStore.git
+	url = git@github.com:royguo/KyteStore.git
 	branch = dev
+	update = none
