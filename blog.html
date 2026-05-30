@@ -119,8 +119,39 @@
             border-color: var(--accent);
         }
 
+        .page-hero {
+            padding: 64px 0 36px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-title {
+            margin-bottom: 18px;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            max-width: 780px;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            font-size: 46px;
+            font-weight: normal;
+            line-height: 1.15;
+            overflow-wrap: anywhere;
+        }
+
+        .intro {
+            max-width: 760px;
+            color: var(--text-secondary);
+            font-size: 18px;
+            overflow-wrap: anywhere;
+        }
+
         .blog-list {
-            padding: 64px 0 88px;
+            padding: 36px 0 88px;
         }
 
         .blog-row {
@@ -203,6 +234,14 @@
                 font-size: 11px;
             }
 
+            .page-hero {
+                padding: 48px 0 30px;
+            }
+
+            h1 {
+                font-size: 34px;
+            }
+
             .blog-row {
                 grid-template-columns: 1fr;
                 gap: 10px;
@@ -234,6 +273,14 @@
     </header>
 
     <main>
+        <section class="page-hero">
+            <div class="container">
+                <div class="section-title">Blog</div>
+                <h1 data-i18n="blog-title">技术博客</h1>
+                <p class="intro" data-i18n="blog-intro">KyteStore 团队的一些技术思考都会定期更新在这里。</p>
+            </div>
+        </section>
+
         <section class="blog-list" aria-label="博客列表">
             <div class="container">
                 <a class="blog-row" href="blog/chunkserver-foundation.html">
@@ -288,6 +335,8 @@
                 'nav-blog': 'Blog',
                 'nav-contact': 'Contact',
                 'lang-toggle': '中',
+                'blog-title': 'Technical Blog',
+                'blog-intro': 'Technical notes and architecture thinking from the KyteStore team are updated here regularly.',
                 'post1-category': 'Architecture',
                 'post1-title': 'Unified ChunkServer Foundation: Why Object and File Access Can Share One Data Path',
                 'post1-summary': 'How KyteStore builds S3 Subsystem and FS Subsystem on the same ChunkServer data layer while balancing performance, scalability, and hot/cold tiering.',
@@ -309,6 +358,8 @@
                 'nav-blog': '博客',
                 'nav-contact': '联系我们',
                 'lang-toggle': 'EN',
+                'blog-title': '技术博客',
+                'blog-intro': 'KyteStore 团队的一些技术思考都会定期更新在这里。',
                 'post1-category': '架构',
                 'post1-title': '统一 ChunkServer 底座：对象与文件访问为何可以共用一条数据路径',
                 'post1-summary': '解释 KyteStore 如何在同一套 ChunkServer 数据层之上承载 S3 Subsystem 与 FS Subsystem，并在性能、扩展性和冷热分离之间取得平衡。',
