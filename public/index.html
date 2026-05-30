@@ -891,21 +891,17 @@
                         <thead>
                             <tr>
                                 <th data-i18n="file-th-scenario">测试场景</th>
-                                <th data-i18n="file-th-operation">操作</th>
                                 <th data-i18n="file-th-qps">QPS</th>
-                                <th data-i18n="file-th-avg-lat">平均延迟</th>
-                                <th data-i18n="file-th-p99">P99</th>
+                                <th data-i18n="file-th-latency">延迟</th>
                                 <th data-i18n="file-th-notes">备注</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td data-i18n="file-meta-create-scenario">单 DS 节点</td>
-                                <td data-i18n="file-meta-create-op">文件创建</td>
-                                <td>360.0K</td>
-                                <td></td>
-                                <td></td>
-                                <td data-i18n="file-meta-create-notes">32 线程请求，5M 总文件数量</td>
+                                <td>CREATE</td>
+                                <td>360,000</td>
+                                <td>2.78us/File</td>
+                                <td data-i18n="file-meta-create-notes">32 访问线程，单 DS</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1123,16 +1119,13 @@
                 'file-th-status': 'Status',
                 'file-meta-caption': 'Metadata Performance',
                 'file-data-caption': 'Data Read/Write Performance',
-                'file-th-operation': 'Operation',
                 'file-th-qps': 'QPS',
+                'file-th-latency': 'Latency',
                 'file-th-avg-lat': 'Avg Latency',
-                'file-th-p99': 'P99',
                 'file-th-notes': 'Notes',
                 'file-th-read-tp': 'Read Throughput',
                 'file-th-write-tp': 'Write Throughput',
-                'file-meta-create-scenario': 'Single DS node',
-                'file-meta-create-op': 'File creation',
-                'file-meta-create-notes': '32 request threads, 5M total files',
+                'file-meta-create-notes': '32 access threads, single DS',
                 'file-row1-scenario': 'Sequential AI dataset reads',
                 'file-row1-path': 'Local SSD hot data + ChunkServer',
                 'file-row2-scenario': 'Small files and directory metadata',
@@ -1274,16 +1267,13 @@
                 'file-th-status': '状态',
                 'file-meta-caption': '元数据性能',
                 'file-data-caption': '数据读写性能',
-                'file-th-operation': '操作',
                 'file-th-qps': 'QPS',
+                'file-th-latency': '延迟',
                 'file-th-avg-lat': '平均延迟',
-                'file-th-p99': 'P99',
                 'file-th-notes': '备注',
                 'file-th-read-tp': '读吞吐',
                 'file-th-write-tp': '写吞吐',
-                'file-meta-create-scenario': '单 DS 节点',
-                'file-meta-create-op': '文件创建',
-                'file-meta-create-notes': '32 线程请求，5M 总文件数量',
+                'file-meta-create-notes': '32 访问线程，单 DS',
                 'file-row1-scenario': 'AI 数据集顺序读取',
                 'file-row1-path': 'Local SSD 热数据 + ChunkServer',
                 'file-row2-scenario': '小文件与目录元数据',
