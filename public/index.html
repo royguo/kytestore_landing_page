@@ -201,6 +201,63 @@
             margin-bottom: 0;
         }
 
+        .comparison-table {
+            width: 100%;
+            margin-top: 40px;
+            border-collapse: collapse;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 14px 13px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .comparison-table th:last-child,
+        .comparison-table td:last-child {
+            border-right: none;
+        }
+
+        .comparison-table th {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .comparison-table td {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .comparison-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comparison-table .feature-name {
+            color: var(--text-primary);
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .comparison-table .advantage {
+            color: var(--accent-dim);
+            font-weight: bold;
+        }
+
+        .table-scroll .comparison-table {
+            min-width: 1040px;
+            margin-top: 0;
+        }
+
         .architecture-section {
             background: var(--bg-secondary);
             padding: 80px 0;
@@ -608,6 +665,16 @@
                 padding: 28px;
             }
 
+            .comparison-table th,
+            .comparison-table td {
+                padding: 12px 10px;
+                font-size: 13px;
+            }
+
+            .comparison-table th {
+                font-size: 10px;
+            }
+
             .architecture-section {
                 padding: 56px 0;
             }
@@ -717,35 +784,107 @@
 
     <section id="features" class="section">
         <div class="container">
-            <div class="section-title" data-i18n="features-label">核心功能</div>
-            <h2 data-i18n="features-h2">从统一数据底座到多协议接入</h2>
-            <p data-i18n="features-desc">KyteStore 将数据路径、冷热分离、可靠性能力和上层协议接入解耦：ChunkServer 负责统一的数据底座，上层子系统负责 S3、POSIX 等客户接入与高性能元数据。</p>
+            <div class="section-title" data-i18n="features-label">功能对比</div>
+            <h2 data-i18n="features-h2">KyteStore 与主流存储系统对比</h2>
+            <p data-i18n="features-desc">从读写加速、协议支持、远端对象存储后端和可靠性模型几个维度，对比 KyteStore 与 Alluxio、JuiceFS、Ceph、MinIO、SeaweedFS 的能力边界。</p>
 
-            <div class="features-grid">
-                <div class="feature-card">
-                    <h3 data-i18n="f1-h3">统一 ChunkServer 底座</h3>
-                    <p data-i18n="f1-p">统一管理 chunk、数据路径和本地盘资源，让对象协议与文件语义共享同一套高性能存储底座。</p>
-                </div>
-                <div class="feature-card">
-                    <h3 data-i18n="f2-h3">多副本与高可用</h3>
-                    <p data-i18n="f2-p">ChunkServer 提供多副本可靠存储、故障转移和自动修复能力，面向生产集群保持数据可用性。</p>
-                </div>
-                <div class="feature-card">
-                    <h3 data-i18n="f3-h3">自动冷热分离</h3>
-                    <p data-i18n="f3-p">热数据优先留在本地 SSD，冷数据可回源到 S3/COS/OSS，兼顾访问性能、容量扩展和长期成本。</p>
-                </div>
-                <div class="feature-card">
-                    <h3 data-i18n="f4-h3">S3 Subsystem</h3>
-                    <p data-i18n="f4-p">提供 S3 HTTP Endpoint、对象语义和元数据能力，使湖仓、分析数据库和现有 S3 客户端无缝接入。</p>
-                </div>
-                <div class="feature-card">
-                    <h3 data-i18n="f5-h3">FS Subsystem</h3>
-                    <p data-i18n="f5-p">提供 POSIX/FUSE Endpoint、命名空间和文件元数据，让 AI 训练、推理和脚本工具使用熟悉的文件语义。</p>
-                </div>
-                <div class="feature-card">
-                    <h3 data-i18n="f6-h3">远程对象存储后端</h3>
-                    <p data-i18n="f6-p">即使用户通过文件协议访问，底层也可以把 S3 云存储作为远程数据层，实现统一缓存与透明加速。</p>
-                </div>
+            <div class="table-scroll">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="cmp-th-feature">Feature</th>
+                            <th>KyteStore</th>
+                            <th>Alluxio</th>
+                            <th>JuiceFS</th>
+                            <th>Ceph</th>
+                            <th>MinIO</th>
+                            <th>SeaweedFS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="feature-name" data-i18n="cmp-row-position">产品定位</td>
+                            <td class="advantage" data-i18n="cmp-position-kyte">透明加速底座</td>
+                            <td data-i18n="cmp-position-alluxio">数据缓存层</td>
+                            <td data-i18n="cmp-position-juicefs">POSIX 文件系统</td>
+                            <td data-i18n="cmp-position-ceph">分布式主存储</td>
+                            <td data-i18n="cmp-position-minio">S3 主存储</td>
+                            <td data-i18n="cmp-position-seaweed">对象+文件存储</td>
+                        </tr>
+                        <tr>
+                            <td class="feature-name" data-i18n="cmp-row-read">读加速</td>
+                            <td class="advantage" data-i18n="cmp-read-kyte">本地 SSD 缓存</td>
+                            <td class="advantage" data-i18n="cmp-read-alluxio">支持</td>
+                            <td class="advantage" data-i18n="cmp-read-juicefs">客户端缓存</td>
+                            <td data-i18n="cmp-not-accel">非加速层</td>
+                            <td data-i18n="cmp-not-accel">非加速层</td>
+                            <td data-i18n="cmp-read-seaweed">部分支持</td>
+                        </tr>
+                        <tr>
+                            <td class="feature-name" data-i18n="cmp-row-write">写加速</td>
+                            <td class="advantage" data-i18n="cmp-write-kyte">本地多副本可靠写</td>
+                            <td data-i18n="cmp-write-unsafe">写缓存，数据不可靠</td>
+                            <td data-i18n="cmp-write-unsafe">写缓存，数据不可靠</td>
+                            <td data-i18n="cmp-no">不支持</td>
+                            <td data-i18n="cmp-no">不支持</td>
+                            <td data-i18n="cmp-no">不支持</td>
+                        </tr>
+                        <tr>
+                            <td class="feature-name" data-i18n="cmp-row-s3">S3 协议支持</td>
+                            <td class="advantage" data-i18n="cmp-yes">支持</td>
+                            <td class="advantage" data-i18n="cmp-yes">支持</td>
+                            <td class="advantage" data-i18n="cmp-yes">支持</td>
+                            <td class="advantage" data-i18n="cmp-yes">支持</td>
+                            <td class="advantage" data-i18n="cmp-yes">支持</td>
+                            <td class="advantage" data-i18n="cmp-yes">支持</td>
+                        </tr>
+                        <tr>
+                            <td class="feature-name" data-i18n="cmp-row-posix">POSIX 协议支持</td>
+                            <td class="advantage" data-i18n="cmp-yes">支持</td>
+                            <td class="advantage">FUSE</td>
+                            <td class="advantage" data-i18n="cmp-yes">支持</td>
+                            <td class="advantage">CephFS</td>
+                            <td data-i18n="cmp-no">不支持</td>
+                            <td class="advantage">FUSE</td>
+                        </tr>
+                        <tr>
+                            <td class="feature-name" data-i18n="cmp-row-hdfs">HDFS 协议支持</td>
+                            <td data-i18n="cmp-dev">正在开发</td>
+                            <td class="advantage" data-i18n="cmp-yes">支持</td>
+                            <td class="advantage" data-i18n="cmp-yes">支持</td>
+                            <td data-i18n="cmp-no">不支持</td>
+                            <td data-i18n="cmp-no">不支持</td>
+                            <td class="advantage" data-i18n="cmp-yes">支持</td>
+                        </tr>
+                        <tr>
+                            <td class="feature-name" data-i18n="cmp-row-remote">远端 S3 后端</td>
+                            <td class="advantage" data-i18n="cmp-remote-kyte">支持</td>
+                            <td class="advantage" data-i18n="cmp-remote-alluxio">支持 UFS</td>
+                            <td class="advantage" data-i18n="cmp-remote-juicefs">支持</td>
+                            <td data-i18n="cmp-non-primary">非主要模式</td>
+                            <td data-i18n="cmp-non-primary">非主要模式</td>
+                            <td data-i18n="cmp-remote-seaweed">云备份/分层</td>
+                        </tr>
+                        <tr>
+                            <td class="feature-name" data-i18n="cmp-row-reliability">可靠性模型</td>
+                            <td class="advantage" data-i18n="cmp-rely-kyte">Chunk 多副本</td>
+                            <td data-i18n="cmp-rely-alluxio">配置副本</td>
+                            <td data-i18n="cmp-rely-juicefs">依赖本地盘/后端</td>
+                            <td class="advantage" data-i18n="cmp-rely-ceph">副本/EC</td>
+                            <td class="advantage">EC</td>
+                            <td class="advantage" data-i18n="cmp-rely-seaweed">副本/EC</td>
+                        </tr>
+                        <tr>
+                            <td class="feature-name" data-i18n="cmp-row-fit">最适合场景</td>
+                            <td class="advantage" data-i18n="cmp-fit-kyte">湖仓+AI 加速</td>
+                            <td data-i18n="cmp-fit-alluxio">读密集缓存</td>
+                            <td data-i18n="cmp-fit-juicefs">POSIX 访问</td>
+                            <td data-i18n="cmp-fit-ceph">自建统一存储</td>
+                            <td data-i18n="cmp-fit-minio">自建 S3</td>
+                            <td data-i18n="cmp-fit-seaweed">轻量多协议</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </section>
@@ -1066,9 +1205,9 @@
                 'nav-contact': 'CONTACT',
                 'lang-toggle': '中',
                 'hero-h1': 'One data foundation for<br><span class="highlight">S3 and POSIX access</span>',
-                'features-label': 'Core Features',
-                'features-h2': 'From a Unified Data Foundation to Multi-Protocol Access',
-                'features-desc': 'KyteStore separates the data path, hot/cold tiering, reliability, and protocol access. ChunkServer provides the shared foundation; upper subsystems provide S3, POSIX, and high-performance metadata access.',
+                'features-label': 'Feature Comparison',
+                'features-h2': 'KyteStore vs. Mainstream Storage Systems',
+                'features-desc': 'A concise comparison across read/write acceleration, protocol support, remote object-store backends, and reliability models.',
                 'f1-h3': 'Unified ChunkServer Foundation',
                 'f1-p': 'A single chunk management and data path layer lets object protocols and file semantics share the same high-performance storage foundation.',
                 'f2-h3': 'Replicas and High Availability',
@@ -1081,6 +1220,48 @@
                 'f5-p': 'POSIX/FUSE endpoints, namespaces, and file metadata let AI training, inference, and scripts work with familiar file semantics.',
                 'f6-h3': 'Remote Object Storage Backend',
                 'f6-p': 'Even when users access files through POSIX semantics, the backing data can live in cloud object storage for transparent caching and acceleration.',
+                'cmp-th-feature': 'Feature',
+                'cmp-row-position': 'Positioning',
+                'cmp-position-kyte': 'Transparent acceleration',
+                'cmp-position-alluxio': 'Data cache layer',
+                'cmp-position-juicefs': 'POSIX file system',
+                'cmp-position-ceph': 'Distributed primary storage',
+                'cmp-position-minio': 'S3 primary storage',
+                'cmp-position-seaweed': 'Object + file storage',
+                'cmp-row-read': 'Read acceleration',
+                'cmp-read-kyte': 'Local SSD cache',
+                'cmp-read-alluxio': 'Supported',
+                'cmp-read-juicefs': 'Client cache',
+                'cmp-not-accel': 'Not an accel layer',
+                'cmp-read-seaweed': 'Partial',
+                'cmp-row-write': 'Write acceleration',
+                'cmp-write-kyte': 'Local replicated write',
+                'cmp-write-unsafe': 'Write cache, unsafe',
+                'cmp-no': 'No',
+                'cmp-row-s3': 'S3 protocol',
+                'cmp-yes': 'Yes',
+                'cmp-row-posix': 'POSIX protocol',
+                'cmp-row-hdfs': 'HDFS protocol',
+                'cmp-dev': 'In development',
+                'cmp-row-remote': 'Remote S3 backend',
+                'cmp-remote-kyte': 'Supported',
+                'cmp-remote-alluxio': 'UFS support',
+                'cmp-remote-juicefs': 'Supported',
+                'cmp-non-primary': 'Not primary mode',
+                'cmp-remote-seaweed': 'Backup / tiering',
+                'cmp-row-reliability': 'Reliability',
+                'cmp-rely-kyte': 'Chunk replicas',
+                'cmp-rely-alluxio': 'Configured replicas',
+                'cmp-rely-juicefs': 'Local disk / backend',
+                'cmp-rely-ceph': 'Replicas / EC',
+                'cmp-rely-seaweed': 'Replicas / EC',
+                'cmp-row-fit': 'Best fit',
+                'cmp-fit-kyte': 'Lakehouse + AI accel',
+                'cmp-fit-alluxio': 'Read-heavy cache',
+                'cmp-fit-juicefs': 'POSIX access',
+                'cmp-fit-ceph': 'Unified storage cluster',
+                'cmp-fit-minio': 'Self-hosted S3',
+                'cmp-fit-seaweed': 'Light multi-protocol',
                 'arch-label': 'System Architecture',
                 'arch-h2': 'A Unified ChunkServer Foundation for Object and File Access',
                 'arch-p': 'KyteStore builds S3 Subsystem and FS Subsystem on top of a unified ChunkServer foundation. Users can access data through S3-compatible object protocols or POSIX/FUSE file semantics; file access can still use S3/COS/OSS as the remote data layer.',
@@ -1214,9 +1395,9 @@
                 'nav-contact': '联系我们',
                 'lang-toggle': 'EN',
                 'hero-h1': '湖仓系统 和 AI 训推<br><span class="highlight">透明加速存储底座</span>',
-                'features-label': '核心功能',
-                'features-h2': '从统一数据底座到多协议接入',
-                'features-desc': 'KyteStore 将数据路径、冷热分离、可靠性能力和上层协议接入解耦：ChunkServer 负责统一的数据底座，上层子系统负责 S3、POSIX 等客户接入与高性能元数据。',
+                'features-label': '功能对比',
+                'features-h2': 'KyteStore 与主流存储系统对比',
+                'features-desc': '从读写加速、协议支持、远端对象存储后端和可靠性模型几个维度，对比 KyteStore 与 Alluxio、JuiceFS、Ceph、MinIO、SeaweedFS 的能力边界。',
                 'f1-h3': '统一 ChunkServer 底座',
                 'f1-p': '统一管理 chunk、数据路径和本地盘资源，让对象协议与文件语义共享同一套高性能存储底座。',
                 'f2-h3': '多副本与高可用',
@@ -1229,6 +1410,48 @@
                 'f5-p': '提供 POSIX/FUSE Endpoint、命名空间和文件元数据，让 AI 训练、推理和脚本工具使用熟悉的文件语义。',
                 'f6-h3': '远程对象存储后端',
                 'f6-p': '即使用户通过文件协议访问，底层也可以把 S3 云存储作为远程数据层，实现统一缓存与透明加速。',
+                'cmp-th-feature': 'Feature',
+                'cmp-row-position': '产品定位',
+                'cmp-position-kyte': '透明加速底座',
+                'cmp-position-alluxio': '数据缓存层',
+                'cmp-position-juicefs': 'POSIX 文件系统',
+                'cmp-position-ceph': '分布式主存储',
+                'cmp-position-minio': 'S3 主存储',
+                'cmp-position-seaweed': '对象+文件存储',
+                'cmp-row-read': '读加速',
+                'cmp-read-kyte': '本地 SSD 缓存',
+                'cmp-read-alluxio': '支持',
+                'cmp-read-juicefs': '客户端缓存',
+                'cmp-not-accel': '非加速层',
+                'cmp-read-seaweed': '部分支持',
+                'cmp-row-write': '写加速',
+                'cmp-write-kyte': '本地多副本可靠写',
+                'cmp-write-unsafe': '写缓存，数据不可靠',
+                'cmp-no': '不支持',
+                'cmp-row-s3': 'S3 协议支持',
+                'cmp-yes': '支持',
+                'cmp-row-posix': 'POSIX 协议支持',
+                'cmp-row-hdfs': 'HDFS 协议支持',
+                'cmp-dev': '正在开发',
+                'cmp-row-remote': '远端 S3 后端',
+                'cmp-remote-kyte': '支持',
+                'cmp-remote-alluxio': '支持 UFS',
+                'cmp-remote-juicefs': '支持',
+                'cmp-non-primary': '非主要模式',
+                'cmp-remote-seaweed': '云备份/分层',
+                'cmp-row-reliability': '可靠性模型',
+                'cmp-rely-kyte': 'Chunk 多副本',
+                'cmp-rely-alluxio': '配置副本',
+                'cmp-rely-juicefs': '依赖本地盘/后端',
+                'cmp-rely-ceph': '副本/EC',
+                'cmp-rely-seaweed': '副本/EC',
+                'cmp-row-fit': '最适合场景',
+                'cmp-fit-kyte': '湖仓+AI 加速',
+                'cmp-fit-alluxio': '读密集缓存',
+                'cmp-fit-juicefs': 'POSIX 访问',
+                'cmp-fit-ceph': '自建统一存储',
+                'cmp-fit-minio': '自建 S3',
+                'cmp-fit-seaweed': '轻量多协议',
                 'arch-label': '系统架构',
                 'arch-h2': '统一 ChunkServer 底座，支撑对象与文件访问',
                 'arch-p': 'KyteStore 以 ChunkServer 为统一数据底座，在其上构建 S3 Subsystem 和 FS Subsystem。用户既可以通过 S3 兼容对象协议访问，也可以通过 POSIX/FUSE 文件语义访问；使用文件协议时，底层仍可把 S3/COS/OSS 作为远程数据层。',
