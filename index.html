@@ -205,17 +205,20 @@
             width: 100%;
             margin-top: 40px;
             border-collapse: collapse;
+            table-layout: fixed;
             background: var(--bg-primary);
             border: 1px solid var(--border);
         }
 
         .comparison-table th,
         .comparison-table td {
-            padding: 14px 13px;
+            padding: 12px 9px;
             text-align: left;
             border-bottom: 1px solid var(--border);
             border-right: 1px solid var(--border);
             vertical-align: top;
+            overflow-wrap: anywhere;
+            word-break: normal;
         }
 
         .comparison-table th:last-child,
@@ -239,14 +242,14 @@
             background: var(--bg-secondary);
             color: var(--text-primary);
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 12px;
-            letter-spacing: 0.08em;
+            font-size: 11px;
+            letter-spacing: 0.04em;
             text-transform: uppercase;
         }
 
         .comparison-table td {
             color: var(--text-secondary);
-            font-size: 14px;
+            font-size: 13px;
             line-height: 1.45;
         }
 
@@ -257,7 +260,6 @@
         .comparison-table .feature-name {
             color: var(--text-primary);
             font-weight: bold;
-            white-space: nowrap;
         }
 
         .comparison-table .advantage {
@@ -266,8 +268,12 @@
         }
 
         .table-scroll .comparison-table {
-            min-width: 1040px;
+            min-width: 0;
             margin-top: 0;
+        }
+
+        #features .table-scroll {
+            overflow-x: visible;
         }
 
         .architecture-section {
@@ -685,6 +691,96 @@
 
             .comparison-table th {
                 font-size: 10px;
+            }
+
+            #features .comparison-table,
+            #features .comparison-table tbody,
+            #features .comparison-table tr,
+            #features .comparison-table td {
+                display: block;
+            }
+
+            #features .comparison-table {
+                border: none;
+                background: transparent;
+            }
+
+            #features .comparison-table thead {
+                display: none;
+            }
+
+            #features .comparison-table tbody {
+                display: grid;
+                gap: 14px;
+            }
+
+            #features .comparison-table tr {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                background: var(--bg-primary);
+                border: 1px solid var(--border);
+            }
+
+            #features .comparison-table td {
+                min-height: 62px;
+                border-right: 1px solid var(--border);
+                border-bottom: 1px solid var(--border);
+            }
+
+            #features .comparison-table td:nth-child(2) {
+                border-left: none;
+                border-right: 1px solid var(--border);
+            }
+
+            #features .comparison-table td:nth-child(2n + 1) {
+                border-right: none;
+            }
+
+            #features .comparison-table tbody tr:last-child td {
+                border-bottom: 1px solid var(--border);
+            }
+
+            #features .comparison-table .feature-name {
+                grid-column: 1 / -1;
+                min-height: 0;
+                background: var(--bg-secondary);
+                border-right: none;
+                color: var(--text-primary);
+            }
+
+            #features .comparison-table td:not(.feature-name)::before {
+                display: block;
+                margin-bottom: 4px;
+                color: var(--text-muted);
+                font-family: Arial, Helvetica, sans-serif;
+                font-size: 10px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+
+            #features .comparison-table td:nth-child(2)::before {
+                content: "KyteStore";
+                color: var(--accent);
+            }
+
+            #features .comparison-table td:nth-child(3)::before {
+                content: "Alluxio";
+            }
+
+            #features .comparison-table td:nth-child(4)::before {
+                content: "JuiceFS";
+            }
+
+            #features .comparison-table td:nth-child(5)::before {
+                content: "Ceph";
+            }
+
+            #features .comparison-table td:nth-child(6)::before {
+                content: "MinIO";
+            }
+
+            #features .comparison-table td:nth-child(7)::before {
+                content: "SeaweedFS";
             }
 
             .architecture-section {
