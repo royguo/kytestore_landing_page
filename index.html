@@ -308,6 +308,11 @@
             margin-bottom: 20px;
         }
 
+        .comparison-intro {
+            max-width: 920px;
+            margin-bottom: 28px;
+        }
+
         .arch-bullets {
             list-style: disc;
             padding-left: 1.4em;
@@ -1005,6 +1010,7 @@
             <div class="architecture-comparison">
                 <div class="section-title" data-i18n="features-label">功能对比</div>
                 <h2 data-i18n="features-h2">KyteStore 与主流存储系统对比</h2>
+                <p class="comparison-intro" data-i18n="features-desc">KyteStore 适用于以下业务场景：1）写延迟敏感，希望数据写入后即安全；2）成本敏感，希望本地 SSD 能和远端 S3 数据进行灵活同步；3）扩展性敏感，希望性能能够近线性扩展。</p>
 
                 <div class="table-scroll">
                     <table class="comparison-table">
@@ -1091,15 +1097,6 @@
                             <td class="advantage" data-i18n="cmp-rely-ceph">多副本/EC</td>
                             <td class="advantage" data-i18n="cmp-rely-minio">EC</td>
                             <td class="advantage" data-i18n="cmp-rely-seaweed">EC/多副本</td>
-                        </tr>
-                        <tr>
-                            <td class="feature-name" data-i18n="cmp-row-fit">最适合场景</td>
-                            <td class="advantage" data-i18n="cmp-fit-kyte">湖仓+AI 加速</td>
-                            <td data-i18n="cmp-fit-alluxio">读密集缓存</td>
-                            <td data-i18n="cmp-fit-juicefs">POSIX 访问</td>
-                            <td data-i18n="cmp-fit-ceph">自建统一存储</td>
-                            <td data-i18n="cmp-fit-minio">自建 S3</td>
-                            <td data-i18n="cmp-fit-seaweed">轻量多协议</td>
                         </tr>
                     </tbody>
                     </table>
@@ -1456,7 +1453,7 @@
                 'hero-h1': 'One data foundation for<br><span class="highlight">S3 and POSIX access</span>',
                 'features-label': 'Feature Comparison',
                 'features-h2': 'KyteStore vs. Mainstream Storage Systems',
-                'features-desc': '',
+                'features-desc': 'KyteStore is suited for workloads that: 1) are write-latency sensitive and need data to be safe immediately after write acknowledgement; 2) are cost sensitive and need local SSDs to synchronize flexibly with remote S3; 3) are scalability sensitive and expect performance to scale nearly linearly.',
                 'f1-h3': 'Unified ChunkServer Foundation',
                 'f1-p': 'A single chunk management and data path layer lets object protocols and file semantics share the same high-performance storage foundation.',
                 'f2-h3': 'Replicas and High Availability',
@@ -1508,13 +1505,6 @@
                 'cmp-rely-ceph': 'Replicas / EC',
                 'cmp-rely-minio': 'EC',
                 'cmp-rely-seaweed': 'EC / replicas',
-                'cmp-row-fit': 'Best fit',
-                'cmp-fit-kyte': 'Lakehouse + AI accel',
-                'cmp-fit-alluxio': 'Read-heavy cache',
-                'cmp-fit-juicefs': 'POSIX access',
-                'cmp-fit-ceph': 'Unified storage cluster',
-                'cmp-fit-minio': 'Self-hosted S3',
-                'cmp-fit-seaweed': 'Light multi-protocol',
                 'arch-label': 'Architecture',
                 'arch-h2': 'A Unified ChunkServer Foundation for Object and File Access',
                 'arch-p': 'KyteStore builds S3 Subsystem and FS Subsystem on top of a unified ChunkServer foundation. Users can access data through S3-compatible object protocols or POSIX/FUSE file semantics; file access can still use S3/COS/OSS as the remote data layer.',
@@ -1652,7 +1642,7 @@
                 'hero-h1': '湖仓系统 和 AI 训推<br><span class="highlight">透明加速存储底座</span>',
                 'features-label': '功能对比',
                 'features-h2': 'KyteStore 与主流存储系统对比',
-                'features-desc': '',
+                'features-desc': 'KyteStore 适用于以下业务场景：1）写延迟敏感，希望数据写入后即安全；2）成本敏感，希望本地 SSD 能和远端 S3 数据进行灵活同步；3）扩展性敏感，希望性能能够近线性扩展。',
                 'f1-h3': '统一 ChunkServer 底座',
                 'f1-p': '统一管理 chunk、数据路径和本地盘资源，让对象协议与文件语义共享同一套高性能存储底座。',
                 'f2-h3': '多副本与高可用',
@@ -1704,13 +1694,6 @@
                 'cmp-rely-ceph': '多副本/EC',
                 'cmp-rely-minio': 'EC',
                 'cmp-rely-seaweed': 'EC/多副本',
-                'cmp-row-fit': '最适合场景',
-                'cmp-fit-kyte': '湖仓+AI 加速',
-                'cmp-fit-alluxio': '读密集缓存',
-                'cmp-fit-juicefs': 'POSIX 访问',
-                'cmp-fit-ceph': '自建统一存储',
-                'cmp-fit-minio': '自建 S3',
-                'cmp-fit-seaweed': '轻量多协议',
                 'arch-label': '架构',
                 'arch-h2': '统一 ChunkServer 底座，支撑对象与文件访问',
                 'arch-p': 'KyteStore 以 ChunkServer 为统一数据底座，在其上构建 S3 Subsystem 和 FS Subsystem。用户既可以通过 S3 兼容对象协议访问，也可以通过 POSIX/FUSE 文件语义访问；使用文件协议时，底层仍可把 S3/COS/OSS 作为远程数据层。',
