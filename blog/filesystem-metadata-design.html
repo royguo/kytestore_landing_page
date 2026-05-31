@@ -160,6 +160,14 @@
             overflow-wrap: anywhere;
         }
 
+        .generated-note {
+            margin: -10px 0 26px;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
         .lead {
             margin-bottom: 36px;
             color: var(--text-secondary);
@@ -445,6 +453,7 @@
                 <a class="breadcrumb" href="../blog.html">返回博客列表</a>
                 <div class="meta">文件系统 · 2026-05-31</div>
                 <h1>KyteStore 的 Filesystem 元数据方案选型</h1>
+                <p class="generated-note">本文使用大模型，基于实际的代码实现自动生成。</p>
                 <p class="lead">Filesystem 元数据设计的核心不是把文件名存在哪里，而是如何在高 QPS、可恢复、可迁移和 POSIX 关键语义之间取舍。KyteStore 的选择是：控制面保持轻量，元数据热路径下沉到 DS inode bucket，并用 KyteStore 自身的多副本对象写入路径承载 WAL。</p>
 
                 <div class="toc-box">
@@ -661,6 +670,7 @@
                 <a class="breadcrumb" href="../blog.html">Back to Blog</a>
                 <div class="meta">Filesystem · 2026-05-31</div>
                 <h1>KyteStore Filesystem Metadata Design Choices</h1>
+                <p class="generated-note">Generated with a large language model based on the actual code implementation.</p>
                 <p class="lead">Filesystem metadata design is not just a question of where to store filenames. The real tradeoff is how to balance high QPS, durability, migration, and the POSIX semantics users actually rely on. KyteStore keeps the control plane light, moves the hot path to DS inode buckets, and persists metadata WAL through KyteStore's own replicated object path.</p>
 
                 <div class="toc-box">
