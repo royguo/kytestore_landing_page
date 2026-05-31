@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KyteStore 博客</title>
-    <meta name="description" content="KyteStore 技术博客，记录湖仓系统、AI 训推、S3 与 POSIX 加速相关的架构思考。">
-    <meta name="keywords" content="KyteStore 博客, S3 加速博客, POSIX 文件系统, AI 训练存储, 湖仓系统, ChunkServer, Write Buffer, FS Subsystem, 对象存储缓存, 云存储加速">
+    <meta name="description" content="KyteStore 技术博客，记录 Filesystem 元数据、ChunkServer、S3 与 POSIX 加速相关的架构思考。">
+    <meta name="keywords" content="KyteStore 博客, Filesystem 元数据, FS metadata, POSIX 文件系统, inode bucket, metadata WAL, group commit, ChunkServer, AI 训练存储, 湖仓系统">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://kytestore.com/blog">
     <meta property="og:locale" content="zh_CN">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="KyteStore">
     <meta property="og:title" content="KyteStore 博客">
-    <meta property="og:description" content="记录 KyteStore 在湖仓系统、AI 训推、S3 与 POSIX 加速方向的架构思考。">
+    <meta property="og:description" content="记录 KyteStore 在 Filesystem 元数据、湖仓系统、AI 训推、S3 与 POSIX 加速方向的架构思考。">
     <meta property="og:url" content="https://kytestore.com/blog">
     <meta property="og:image" content="https://kytestore.com/assets/images/ecosystem.jpg">
     <meta name="twitter:card" content="summary_large_image">
@@ -207,6 +207,8 @@
 
         @media (max-width: 768px) {
             .container {
+                width: 100%;
+                max-width: 100vw;
                 padding: 0 20px;
             }
 
@@ -219,18 +221,21 @@
                 display: flex;
                 flex-wrap: wrap;
                 justify-content: center;
-                gap: 8px;
+                gap: 6px;
+                width: calc(100vw - 40px);
+                max-width: calc(100vw - 40px);
+                align-self: stretch;
             }
 
             nav a {
                 margin-left: 0;
-                padding: 6px 10px;
+                padding: 5px 7px;
                 font-size: 11px;
             }
 
             #lang-toggle {
                 margin-left: 0;
-                padding: 6px 10px;
+                padding: 5px 7px;
                 font-size: 11px;
             }
 
@@ -284,36 +289,14 @@
 
         <section class="blog-list" aria-label="博客列表">
             <div class="container">
-                <a class="blog-row" href="blog/chunkserver-foundation.html">
+                <a class="blog-row" href="blog/filesystem-metadata-design.html">
                     <div class="blog-meta">
-                        <span data-i18n="post1-category">架构</span>
-                        <time datetime="2026-05-30">2026-05-30</time>
+                        <span data-i18n="post1-category">文件系统</span>
+                        <time datetime="2026-05-31">2026-05-31</time>
                     </div>
                     <div>
-                        <h2 data-i18n="post1-title">统一 ChunkServer 底座：对象与文件访问为何可以共用一条数据路径</h2>
-                        <p data-i18n="post1-summary">解释 KyteStore 如何在同一套 ChunkServer 数据层之上承载 S3 Subsystem 与 FS Subsystem，并在性能、扩展性和冷热分离之间取得平衡。</p>
-                    </div>
-                </a>
-
-                <a class="blog-row" href="blog/write-buffer.html">
-                    <div class="blog-meta">
-                        <span data-i18n="post2-category">对象路径</span>
-                        <time datetime="2026-05-30">2026-05-30</time>
-                    </div>
-                    <div>
-                        <h2 data-i18n="post2-title">Write Buffer 如何让对象写入先落本地再异步回源</h2>
-                        <p data-i18n="post2-summary">拆解对象写入路径中的本地多副本、Seal 可见性、后台 S3 同步和读后写一致性，说明 KyteStore 写加速的核心语义。</p>
-                    </div>
-                </a>
-
-                <a class="blog-row" href="blog/fs-subsystem.html">
-                    <div class="blog-meta">
-                        <span data-i18n="post3-category">文件路径</span>
-                        <time datetime="2026-05-30">2026-05-30</time>
-                    </div>
-                    <div>
-                        <h2 data-i18n="post3-title">FS Subsystem 的定位：面向 AI 工作负载的文件语义加速</h2>
-                        <p data-i18n="post3-summary">介绍 KyteStore 文件加速的设计边界，为什么优先服务数据集读取、checkpoint 写入、目录遍历和 close-to-open 可见性。</p>
+                        <h2 data-i18n="post1-title">KyteStore 的 Filesystem 元数据方案选型</h2>
+                        <p data-i18n="post1-summary">从文件系统元数据的用途、跨分片 rename 难点、主流选型，到 KyteStore inode bucket、3 副本 WAL 与 group commit 的设计取舍。</p>
                     </div>
                 </a>
             </div>
@@ -339,15 +322,9 @@
                 'lang-toggle': '中',
                 'blog-title': 'Technical Blog',
                 'blog-intro': 'Technical notes and architecture thinking from the KyteStore team are updated here regularly.',
-                'post1-category': 'Architecture',
-                'post1-title': 'Unified ChunkServer Foundation: Why Object and File Access Can Share One Data Path',
-                'post1-summary': 'How KyteStore builds S3 Subsystem and FS Subsystem on the same ChunkServer data layer while balancing performance, scalability, and hot/cold tiering.',
-                'post2-category': 'Object Path',
-                'post2-title': 'How Write Buffer Lands Object Writes Locally Before Async Sync',
-                'post2-summary': 'A look at local replicas, seal visibility, background S3 sync, and read-after-write consistency in the object write path.',
-                'post3-category': 'File Path',
-                'post3-title': 'FS Subsystem Positioning: File-Semantic Acceleration for AI Workloads',
-                'post3-summary': 'The design boundary of KyteStore file acceleration, focused on dataset reads, checkpoint writes, directory traversal, and close-to-open visibility.',
+                'post1-category': 'Filesystem',
+                'post1-title': 'KyteStore Filesystem Metadata Design Choices',
+                'post1-summary': 'A technical look at filesystem metadata, cross-shard rename, mainstream design options, and KyteStore inode buckets, 3-replica WAL, and group commit.',
                 'footer-p': '&copy; 2024 KyteStore. High-Performance Object and File Storage Acceleration. JiZhi Innovation Technology Limit.'
             },
             zh: {
@@ -363,15 +340,9 @@
                 'lang-toggle': 'EN',
                 'blog-title': '技术博客',
                 'blog-intro': 'KyteStore 团队的一些技术思考都会定期更新在这里。',
-                'post1-category': '架构',
-                'post1-title': '统一 ChunkServer 底座：对象与文件访问为何可以共用一条数据路径',
-                'post1-summary': '解释 KyteStore 如何在同一套 ChunkServer 数据层之上承载 S3 Subsystem 与 FS Subsystem，并在性能、扩展性和冷热分离之间取得平衡。',
-                'post2-category': '对象路径',
-                'post2-title': 'Write Buffer 如何让对象写入先落本地再异步回源',
-                'post2-summary': '拆解对象写入路径中的本地多副本、Seal 可见性、后台 S3 同步和读后写一致性，说明 KyteStore 写加速的核心语义。',
-                'post3-category': '文件路径',
-                'post3-title': 'FS Subsystem 的定位：面向 AI 工作负载的文件语义加速',
-                'post3-summary': '介绍 KyteStore 文件加速的设计边界，为什么优先服务数据集读取、checkpoint 写入、目录遍历和 close-to-open 可见性。',
+                'post1-category': '文件系统',
+                'post1-title': 'KyteStore 的 Filesystem 元数据方案选型',
+                'post1-summary': '从文件系统元数据的用途、跨分片 rename 难点、主流选型，到 KyteStore inode bucket、3 副本 WAL 与 group commit 的设计取舍。',
                 'footer-p': '&copy; 2024 KyteStore. 高性能对象与文件存储加速。北京集智创新科技有限公司。'
             }
         };

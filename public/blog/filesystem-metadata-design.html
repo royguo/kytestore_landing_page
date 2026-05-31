@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KyteStore 的 Filesystem 元数据方案选型 - KyteStore 博客</title>
+    <meta name="description" content="从文件系统元数据的用途、跨分片 rename 难点、主流选型到 KyteStore inode bucket、3 副本 WAL 与 group commit 方案，解析 KyteStore Filesystem 元数据设计。">
+    <meta name="keywords" content="KyteStore, Filesystem 元数据, FS metadata, POSIX rename, inode bucket, dentry, metadata WAL, 3 副本 WAL, group commit, ChunkServer, 文件系统性能">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://kytestore.com/blog/filesystem-metadata-design">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="KyteStore">
+    <meta property="og:title" content="KyteStore 的 Filesystem 元数据方案选型">
+    <meta property="og:description" content="KyteStore 如何在 DS 本地 metadata shard、3 副本 WAL、group commit 与可恢复 rename transaction 之间做设计取舍。">
+    <meta property="og:url" content="https://kytestore.com/blog/filesystem-metadata-design">
+    <meta property="og:image" content="https://kytestore.com/assets/images/architecture.jpg">
+    <meta property="article:published_time" content="2026-05-31">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg">
+    <style>
+        :root {
+            --bg-primary: #FDFCF9;
+            --bg-secondary: #F7F7F5;
+            --bg-tertiary: #F0EFEB;
+            --text-primary: #1F1F1F;
+            --text-secondary: #3C3C3C;
+            --text-muted: #6B6B6B;
+            --accent: #2F5F8F;
+            --accent-dim: #1E4A6E;
+            --border: #E4E4E2;
+            --border-strong: #C4C0B8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-size: 17px;
+            line-height: 1.78;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            border-bottom: 3px double var(--border-strong);
+            padding: 20px 0;
+            background: rgba(253, 252, 249, 0.96);
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            color: var(--text-primary);
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        nav a {
+            margin-left: 28px;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            letter-spacing: 0.12em;
+            text-decoration: none;
+            text-transform: uppercase;
+        }
+
+        nav a:hover,
+        nav a.active {
+            color: var(--accent);
+        }
+
+        #lang-toggle {
+            background: none;
+            border: 1px solid var(--border-strong);
+            color: var(--text-muted);
+            cursor: pointer;
+            margin-left: 28px;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 4px 10px;
+            transition: color 0.2s, border-color 0.2s;
+            vertical-align: middle;
+        }
+
+        #lang-toggle:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .article-shell {
+            padding: 72px 0 96px;
+        }
+
+        .article {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            min-width: 0;
+        }
+
+        .breadcrumb {
+            display: inline-block;
+            margin-bottom: 28px;
+            color: var(--accent);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            letter-spacing: 0.1em;
+            text-decoration: none;
+            text-transform: uppercase;
+        }
+
+        .meta {
+            margin-bottom: 16px;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin-bottom: 24px;
+            color: var(--text-primary);
+            font-size: 44px;
+            font-weight: normal;
+            line-height: 1.18;
+            overflow-wrap: anywhere;
+        }
+
+        .lead {
+            margin-bottom: 36px;
+            color: var(--text-secondary);
+            font-size: 20px;
+            overflow-wrap: anywhere;
+        }
+
+        h2 {
+            margin: 46px 0 14px;
+            color: var(--text-primary);
+            font-size: 28px;
+            font-weight: normal;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+        }
+
+        h3 {
+            margin: 28px 0 10px;
+            color: var(--accent-dim);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 15px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        p {
+            margin-bottom: 18px;
+            color: var(--text-secondary);
+            overflow-wrap: anywhere;
+        }
+
+        ul {
+            margin: 0 0 22px 1.3em;
+            color: var(--text-secondary);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+            font-size: 0.92em;
+        }
+
+        .toc-box,
+        .note {
+            margin: 30px 0;
+            padding: 20px 22px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        .toc-box strong,
+        .note strong {
+            color: var(--text-primary);
+        }
+
+        .toc-box ol {
+            margin: 12px 0 0 1.25em;
+            color: var(--text-secondary);
+        }
+
+        .toc-box li {
+            margin-bottom: 6px;
+        }
+
+        .diagram-card {
+            margin: 34px 0;
+            padding: 18px;
+            border: 1px solid var(--border);
+            background: #FFFFFF;
+        }
+
+        .diagram-card svg {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .diagram-title {
+            margin-bottom: 14px;
+            color: var(--accent-dim);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .table-wrap {
+            width: 100%;
+            margin: 28px 0;
+            overflow-x: auto;
+        }
+
+        .benchmark-table {
+            width: 100%;
+            min-width: 720px;
+            border-collapse: collapse;
+            border: 1px solid var(--border);
+            background: #FFFFFF;
+        }
+
+        .benchmark-table th,
+        .benchmark-table td {
+            padding: 12px 14px;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .benchmark-table th {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .benchmark-table td {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        .benchmark-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .benchmark-table th:last-child,
+        .benchmark-table td:last-child {
+            border-right: none;
+        }
+
+        .callout-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin: 28px 0;
+        }
+
+        .callout {
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            padding: 18px;
+        }
+
+        .callout strong {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--accent-dim);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .callout span {
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .post-footnote {
+            margin-top: 42px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        footer {
+            border-top: 3px double var(--border-strong);
+            padding: 36px 0;
+            text-align: center;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                max-width: 100vw;
+                padding: 0 20px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            nav {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 6px;
+                width: calc(100vw - 40px);
+                max-width: calc(100vw - 40px);
+                align-self: stretch;
+            }
+
+            nav a {
+                margin-left: 0;
+                padding: 5px 7px;
+                font-size: 11px;
+            }
+
+            #lang-toggle {
+                margin-left: 0;
+                padding: 5px 7px;
+                font-size: 11px;
+            }
+
+            .article-shell {
+                padding: 52px 0 72px;
+            }
+
+            h1 {
+                max-width: calc(100vw - 40px);
+                font-size: 32px;
+                overflow-wrap: anywhere !important;
+                word-break: break-all !important;
+            }
+
+            .lead {
+                max-width: calc(100vw - 40px);
+                font-size: 18px;
+                overflow-wrap: anywhere !important;
+                word-break: break-all !important;
+            }
+
+            p,
+            li {
+                max-width: calc(100vw - 40px);
+                overflow-wrap: anywhere !important;
+                word-break: break-all !important;
+            }
+
+            h2 {
+                font-size: 24px;
+            }
+
+            .callout-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .diagram-card {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a class="logo" href="../index.html">Kyte<span>Store</span></a>
+                <nav aria-label="主导航">
+                    <a href="../index.html" data-i18n="nav-home">首页</a>
+                    <a href="../index.html#architecture" data-i18n="nav-architecture">架构</a>
+                    <a href="../index.html#features" data-i18n="nav-features">功能</a>
+                    <a href="../index.html#performance" data-i18n="nav-performance">性能</a>
+                    <a href="../index.html#deployment" data-i18n="nav-deployment">配置</a>
+                    <a href="../whitepaper.html" data-i18n="nav-docs">文档</a>
+                    <a class="active" href="../blog.html" data-i18n="nav-blog">博客</a>
+                    <a href="../index.html#contact" data-i18n="nav-contact">联系我们</a>
+                    <button id="lang-toggle" data-i18n="lang-toggle" onclick="toggleLang()">EN</button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="article-shell">
+        <div class="container">
+            <article class="article" data-lang-block="zh">
+                <a class="breadcrumb" href="../blog.html">返回博客列表</a>
+                <div class="meta">文件系统 · 2026-05-31</div>
+                <h1>KyteStore 的 Filesystem 元数据方案选型</h1>
+                <p class="lead">Filesystem 元数据设计的核心不是把文件名存在哪里，而是如何在高 QPS、可恢复、可迁移和 POSIX 关键语义之间取舍。KyteStore 的选择是：控制面保持轻量，元数据热路径下沉到 DS inode bucket，并用 KyteStore 自身的多副本对象写入路径承载 WAL。</p>
+
+                <div class="toc-box">
+                    <strong>本文大纲</strong>
+                    <ol>
+                        <li>文件系统元数据的用途</li>
+                        <li>真正困难的部分：跨分片操作</li>
+                        <li>主流方案取舍</li>
+                        <li>KyteStore 的 inode bucket 架构</li>
+                        <li>3 副本 WAL 与 batch group commit</li>
+                        <li>跨 bucket rename 的 transaction 模型</li>
+                        <li>性能测试数据</li>
+                    </ol>
+                </div>
+
+                <h2>文件系统元数据到底管什么</h2>
+                <p>文件系统元数据不只是文件名。一次普通的 <code>open("/a/b/c")</code> 会经历路径拆分、逐级 lookup、dentry 到 inode 的映射、inode attr 读取，随后数据读写还要依赖 extent map 找到文件内容所在的位置。目录遍历需要稳定的 list 视图；<code>mkdir</code>、<code>unlink</code>、<code>rename</code> 则要更新目录可见性、inode 生命周期和恢复状态。</p>
+                <p>在 AI 数据集和湖仓工作负载里，文件可能很大，也可能非常碎。大文件读写会把瓶颈推到数据路径，而大量小文件、checkpoint publish、训练脚本反复扫描目录时，元数据路径往往更早成为上限。因此 KyteStore 的 FS Subsystem 必须把 lookup/create/rename 这类操作当成一等性能路径，而不是把它们放到一个中心数据库里“能跑就行”。</p>
+
+                <h2>真正困难的部分：跨分片操作</h2>
+                <p>如果所有文件元数据都在一个节点上，rename 的正确性比较直接；但这个模型扩展性很差。KyteStore 把目录项按 <code>parent inode + name</code> 路由到不同 dentry bucket，大目录可以拆到多个 inode bucket 上。这样 lookup 和 create 可以横向扩展，但 rename 会变复杂。</p>
+                <p>一个容易被忽略的点是：跨 bucket 并不等于跨目录。同一个目录下的两个文件名，因为 hash 不同，也可能落在不同 bucket。POSIX rename 又要求 inode identity 不变，不能用“创建一个新 inode 指向旧 extent，再删除旧 inode”的方式代替，否则会破坏 open file handle、inode number、并发读写和 crash recovery 语义。</p>
+                <p>所以元数据系统的难点不是单条 dentry 的增删改，而是当 old binding 和 new binding 位于不同 bucket、甚至不同 DS 时，如何让用户看到一次原子切换，并且在 coordinator 崩溃后仍然能根据 durable state 完成或回滚。</p>
+
+                <h2>主流方案取舍</h2>
+                <div class="callout-grid">
+                    <div class="callout">
+                        <strong>集中式管理</strong>
+                        <span>Redis/FDB 统一保存 filename 到 inode、inode attr 和 extent map。实现简单，事务边界清晰，但 create、lookup、readdir 和 rename 都会把尾延迟和吞吐上限带到中心层。</span>
+                    </div>
+                    <div class="callout">
+                        <strong>去中心化事务</strong>
+                        <span>多个 metadata shard 各自服务本地索引，跨 shard 操作通过 intent、lock、WAL 和 recovery 协议收敛。扩展性好，但实现复杂度集中在 fencing 和故障恢复。</span>
+                    </div>
+                    <div class="callout">
+                        <strong>精简语义</strong>
+                        <span>拒绝跨目录 rename、拒绝 target replace、弱化 readdir 或 directory mutation。短期容易上线，但会把实现边界暴露给用户和上层框架。</span>
+                    </div>
+                </div>
+                <p>KyteStore 不把完整 file metadata 放进 MetaServer/FDB。MS/FDB 更适合做 FS binding、inode bucket owner map、owner epoch、inode range allocation 和少量 transaction lock。高频 dentry、inode attr、extent map 则由 DS FSSubsystem 的 inode bucket owner 承担。</p>
+
+                <h2>KyteStore 的 inode bucket 架构</h2>
+                <p>KyteStore 的恢复和扩展单位是 inode bucket。一个 inode bucket 拥有自己的 owner epoch、WAL、checkpoint、materialized index 和恢复边界。FE/SDK 或 DS path RPC 根据 DirectoryLayout 将 <code>parent inode + filename</code> 映射到具体 dentry bucket，再发给当前 owner DS。</p>
+                <p>这个模型把 MS/FDB 从普通文件 I/O 热路径中移出去：lookup、getattr、readdir、create、unlink、mkdir 的主要路径是访问 DS 本地 materialized index；MS/FDB 只在 owner 变更、range 分配、bucket materialize 或跨 DS transaction lock 时参与。</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Metadata Hot Path</div>
+                    <svg viewBox="0 0 900 420" role="img" aria-label="KyteStore 文件系统元数据热路径架构图">
+                        <defs>
+                            <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+                        <rect x="24" y="28" width="170" height="70" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="109" y="58" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">FE / SDK</text>
+                        <text x="109" y="80" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">path walk, layout cache</text>
+
+                        <rect x="296" y="28" width="230" height="108" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="411" y="58" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">DS FSMetadata Owner</text>
+                        <text x="411" y="82" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">inode bucket</text>
+                        <text x="411" y="104" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">dentry / inode attr / extent map</text>
+
+                        <rect x="618" y="28" width="240" height="108" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="738" y="58" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">MetaServer / FDB</text>
+                        <text x="738" y="82" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">binding, owner map, epoch</text>
+                        <text x="738" y="104" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">inode range, txn locks</text>
+
+                        <rect x="296" y="214" width="230" height="86" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="411" y="248" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">DS-level Metadata WAL</text>
+                        <text x="411" y="272" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">bucket LSN + owner epoch</text>
+
+                        <rect x="618" y="214" width="240" height="130" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="738" y="248" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">KyteStore WRITE_BUFFER</text>
+                        <text x="738" y="272" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">AppendChunkReplicated</text>
+                        <text x="738" y="294" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">ChunkServer 3 replicas</text>
+                        <text x="738" y="316" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">checkpoint + WAL segment objects</text>
+
+                        <path d="M194 64 H286" stroke="#2F5F8F" stroke-width="2" marker-end="url(#arrow)"></path>
+                        <text x="240" y="50" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">lookup/create</text>
+
+                        <path d="M526 70 H608" stroke="#8A8A8A" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#arrow)"></path>
+                        <text x="566" y="56" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">control only</text>
+
+                        <path d="M411 136 V204" stroke="#2F5F8F" stroke-width="2" marker-end="url(#arrow)"></path>
+                        <text x="448" y="176" font-family="Arial" font-size="12" fill="#2F5F8F">WAL before index apply</text>
+
+                        <path d="M526 257 H608" stroke="#2F5F8F" stroke-width="2" marker-end="url(#arrow)"></path>
+                        <text x="566" y="242" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">durable append</text>
+
+                        <path d="M318 300 C260 360, 520 376, 444 306" fill="none" stroke="#8A8A8A" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#arrow)"></path>
+                        <text x="390" y="372" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">replay WAL after checkpoint</text>
+                    </svg>
+                </div>
+
+                <h2>3 副本 WAL 与 batch group commit</h2>
+                <p>KyteStore 的 metadata mutation 遵循一个简单但很关键的顺序：先校验本地 index，构造 WAL record，把 WAL 追加到 durable log；只有 WAL durable 之后，才把变更 apply 到本地 materialized index 并返回成功。如果 DS 在 WAL durable 后、index apply 前崩溃，恢复流程会加载 checkpoint 并重放 WAL，把 index 收敛回来。</p>
+                <p>这里的 WAL 没有依赖外部 Redis 或 FDB，而是依托 KyteStore 自己的对象写入路径：metadata WAL segment 作为内部隐藏对象写到 WRITE_BUFFER namespace，底层通过 ChunkSubSystem 的 <code>AppendChunkReplicated</code> 进入 ChunkServer 多副本路径。当前性能测试使用 3 副本配置，因此每条已提交的 metadata mutation 都落在本地多副本 WAL 上，再由 checkpoint 周期性压缩恢复成本。</p>
+                <p>如果每个 create 都单独产生一个对象写，延迟会被小 I/O 放大。KyteStore 因此引入 DS-level WAL 和 group commit：多个逻辑 metadata records 会被聚合为一个物理 WAL block，写入同一个 active segment object；每个 record 仍保留自己的 <code>inode_bucket_id</code>、bucket-local LSN 和 owner epoch。这样既保留 per-bucket 顺序和恢复边界，也能把一次 WAL I/O 的成本摊到一批请求上。</p>
+                <div class="note"><strong>一个重要细节：</strong>group commit 不靠固定等待凑批。worker 会自然 drain 已经排队的请求；当上一轮 WAL I/O 正在进行时，新请求继续排队，下一轮一起提交。这样可以降低均摊延迟，同时避免为了追求 batch size 人为增加前台等待。</div>
+
+                <h2>跨 bucket rename 的 transaction 模型</h2>
+                <p>在同一个 dentry bucket 内，rename 仍然是快路径：写一条 WAL record，删除 old dentry，写入 new dentry，inode 不变，不访问 MS lock。只有 old bucket 与 new bucket 不同时，才进入 transaction slow path。</p>
+                <p>最新方案把跨 bucket rename 建模成可恢复 metadata transaction。WAL 中有 transaction descriptor，记录 <code>txn_id</code>、参与 bucket、受影响 dentry、受影响 inode、old dentry 和 new dentry；状态机包含 prepared、commit decided、applied、aborted、finished。index 层会为 pending transaction 安装 dentry/inode fence，checkpoint 也会保存 pending transaction，保证恢复后能继续完成或回滚。</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Cross Bucket Rename Sequence</div>
+                    <svg viewBox="0 0 900 500" role="img" aria-label="KyteStore 跨 bucket rename transaction 时序图">
+                        <defs>
+                            <marker id="seq-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+                        <text x="120" y="42" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">Coordinator</text>
+                        <text x="320" y="42" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">MS Locks</text>
+                        <text x="520" y="42" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">Source Bucket</text>
+                        <text x="740" y="42" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">Target Bucket</text>
+
+                        <line x1="120" y1="60" x2="120" y2="455" stroke="#C4C0B8" stroke-width="2"></line>
+                        <line x1="320" y1="60" x2="320" y2="455" stroke="#C4C0B8" stroke-width="2"></line>
+                        <line x1="520" y1="60" x2="520" y2="455" stroke="#C4C0B8" stroke-width="2"></line>
+                        <line x1="740" y1="60" x2="740" y2="455" stroke="#C4C0B8" stroke-width="2"></line>
+
+                        <path d="M120 92 H310" stroke="#2F5F8F" stroke-width="2" marker-end="url(#seq-arrow)"></path>
+                        <text x="215" y="82" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">AcquireTxnLocks</text>
+
+                        <path d="M120 150 H510" stroke="#2F5F8F" stroke-width="2" marker-end="url(#seq-arrow)"></path>
+                        <text x="315" y="140" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">TxnPrepare: old dentry fence</text>
+
+                        <path d="M120 208 H730" stroke="#2F5F8F" stroke-width="2" marker-end="url(#seq-arrow)"></path>
+                        <text x="425" y="198" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">TxnPrepare: target absent, new dentry fence</text>
+
+                        <path d="M120 266 H510" stroke="#2F5F8F" stroke-width="2" marker-end="url(#seq-arrow)"></path>
+                        <text x="315" y="256" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">TxnCommitDecision durable</text>
+
+                        <path d="M120 324 H730" stroke="#2F5F8F" stroke-width="2" marker-end="url(#seq-arrow)"></path>
+                        <text x="425" y="314" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">TxnApply: new path visible</text>
+
+                        <path d="M120 382 H510" stroke="#2F5F8F" stroke-width="2" marker-end="url(#seq-arrow)"></path>
+                        <text x="315" y="372" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">TxnApply: remove old path</text>
+
+                        <path d="M120 438 H310" stroke="#2F5F8F" stroke-width="2" marker-end="url(#seq-arrow)"></path>
+                        <text x="215" y="428" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">TxnFinish + Release</text>
+
+                        <rect x="36" y="468" width="828" height="22" fill="#F7F7F5"></rect>
+                        <text x="450" y="484" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">Recovery rule: once target commit is durable, recovery rolls forward and finishes source commit.</text>
+                    </svg>
+                </div>
+
+                <p>这个设计的关键是把复杂度限制在 rename slow path 里。create、unlink、mkdir、lookup、readdir 不访问 MS lock，不因为跨 bucket rename 的存在而退化；same-bucket rename 继续使用单 WAL 快路径。MS lock 只做 fencing，不承载业务 metadata 内容。</p>
+
+                <h2>API 语义边界</h2>
+                <p>当前 FS metadata RPC 覆盖 <code>Mkdir</code>、<code>CreateFile</code>、<code>Lookup</code>、<code>GetAttr</code>、<code>Readdir</code>、<code>Unlink</code>、<code>Rmdir</code> 和 <code>Rename</code>。mutation 请求带 <code>client_op_id</code>，用于 WAL replay 和客户端重试时的幂等判断。内部请求可以携带 resolved dentry bucket，避免重复 path/hash 路由。</p>
+                <p>第一阶段不会把所有 POSIX 细节一次性做满。目标存在时的 replace、非空目录 rename 后的 path cache invalidation、跨 DS recovery 工具化都会分阶段完善。但核心方向不会退回到中心化 file metadata，也不会用 copy/delete 去伪装 POSIX rename。</p>
+
+                <h2>性能测试</h2>
+                <p>下面是最新 FS metadata operation perf 数据。测试为单个 DS 节点、32 访问线程；理论上多 DS 节点可以按 inode bucket 横向扩展，达到数百万 QPS。这里的 <code>avg_us/op</code> 是按总吞吐折算的均摊延迟，<code>WAL p50_us</code> 和 <code>WAL p99_us</code> 是 batch WAL flush 维度，因此二者不是同一粒度。</p>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table">
+                        <thead>
+                            <tr>
+                                <th>OP</th>
+                                <th>QPS</th>
+                                <th>avg_us/op</th>
+                                <th>WAL p50_us</th>
+                                <th>WAL p99_us</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>create</td>
+                                <td>379,324</td>
+                                <td>2.64</td>
+                                <td>2,114</td>
+                                <td>6,175</td>
+                            </tr>
+                            <tr>
+                                <td>unlink</td>
+                                <td>270,512</td>
+                                <td>3.70</td>
+                                <td>5,973</td>
+                                <td>12,690</td>
+                            </tr>
+                            <tr>
+                                <td>rename（跨目录）</td>
+                                <td>237,571</td>
+                                <td>4.21</td>
+                                <td>3,881</td>
+                                <td>13,024</td>
+                            </tr>
+                            <tr>
+                                <td>mkdir</td>
+                                <td>230,950</td>
+                                <td>4.33</td>
+                                <td>5,299</td>
+                                <td>13,327</td>
+                            </tr>
+                            <tr>
+                                <td>rmdir</td>
+                                <td>N/A</td>
+                                <td>N/A</td>
+                                <td>N/A</td>
+                                <td>N/A</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>从数据看，WAL 的单次 batch flush 仍然在毫秒级，但因为 group commit 的 batch size 足够大，前台操作可以获得微秒级均摊成本。这也是 KyteStore 没有把“可靠写”和“高吞吐”做成二选一的原因：可靠性靠 3 副本 WAL，吞吐靠 batch 与 shard/stream 并行。</p>
+                <p class="post-footnote">本文聚焦元数据方案选型。数据读写路径、extent map 与对象后端联动会在后续文章单独展开。</p>
+            </article>
+
+            <article class="article" data-lang-block="en" hidden>
+                <a class="breadcrumb" href="../blog.html">Back to Blog</a>
+                <div class="meta">Filesystem · 2026-05-31</div>
+                <h1>KyteStore Filesystem Metadata Design Choices</h1>
+                <p class="lead">Filesystem metadata design is not just a question of where to store filenames. The real tradeoff is how to balance high QPS, durability, migration, and the POSIX semantics users actually rely on. KyteStore keeps the control plane light, moves the hot path to DS inode buckets, and persists metadata WAL through KyteStore's own replicated object path.</p>
+
+                <div class="toc-box">
+                    <strong>Outline</strong>
+                    <ol>
+                        <li>What filesystem metadata is responsible for</li>
+                        <li>Why cross-shard operations are hard</li>
+                        <li>Main design choices in the industry</li>
+                        <li>KyteStore inode bucket architecture</li>
+                        <li>3-replica WAL and batch group commit</li>
+                        <li>Cross-bucket rename transaction model</li>
+                        <li>Performance results</li>
+                    </ol>
+                </div>
+
+                <h2>What Filesystem Metadata Does</h2>
+                <p>Filesystem metadata is more than filenames. A normal <code>open("/a/b/c")</code> walks path components, resolves dentry to inode, loads inode attributes, and eventually uses extent maps to find data. Directory listing needs a stable view. <code>mkdir</code>, <code>unlink</code>, and <code>rename</code> must update visibility, inode lifecycle, and recovery state.</p>
+                <p>In AI and lakehouse workloads, files may be large, but they may also be extremely numerous. Large files stress the data path. Small files, checkpoint publish patterns, and repeated directory scans often hit the metadata path first. KyteStore therefore treats lookup, create, and rename as first-class performance paths instead of delegating them to a central database by default.</p>
+
+                <h2>The Hard Part: Cross-Shard Operations</h2>
+                <p>With one metadata node, rename correctness is straightforward, but the model does not scale. KyteStore routes dentries by <code>parent inode + name</code> into dentry buckets, allowing large directories to spread across inode buckets. Lookup and create can scale out, but rename becomes harder.</p>
+                <p>Cross-bucket does not necessarily mean cross-directory. Two names in the same directory can hash into different buckets. POSIX rename also requires inode identity to remain unchanged. Creating a new inode that points to old extents and then deleting the old inode would break inode numbers, open file handles, concurrent access, and crash recovery semantics.</p>
+
+                <h2>Main Design Choices</h2>
+                <div class="callout-grid">
+                    <div class="callout">
+                        <strong>Centralized</strong>
+                        <span>Redis or FDB stores filename-to-inode, inode attributes, and extents. This is easy to reason about, but lookup, create, readdir, and rename inherit central write throughput and tail latency.</span>
+                    </div>
+                    <div class="callout">
+                        <strong>Decentralized</strong>
+                        <span>Metadata shards serve local indexes, while cross-shard operations use intents, locks, WAL, and recovery. Scalability is better, but fencing and recovery become the hard parts.</span>
+                    </div>
+                    <div class="callout">
+                        <strong>Reduced Semantics</strong>
+                        <span>Reject cross-directory rename, target replace, or complex directory mutation. This ships quickly, but exposes storage implementation boundaries to users and frameworks.</span>
+                    </div>
+                </div>
+                <p>KyteStore does not put full file metadata in MetaServer/FDB. MS/FDB tracks FS bindings, inode bucket owners, owner epochs, inode range allocation, and lightweight transaction locks. Hot dentry, inode attribute, and extent state belongs to the DS FSSubsystem owner.</p>
+
+                <h2>KyteStore Inode Buckets</h2>
+                <p>The recovery and scaling unit is the inode bucket. Each bucket has its own owner epoch, WAL, checkpoint, materialized index, and recovery boundary. FE/SDK or DS path RPC uses DirectoryLayout to map <code>parent inode + filename</code> to a dentry bucket and then sends the operation to the owner DS.</p>
+                <p>This keeps MS/FDB out of normal file I/O: lookup, getattr, readdir, create, unlink, and mkdir mainly hit the DS local materialized index. MS/FDB participates in owner transfer, range allocation, bucket materialization, and cross-DS transaction locking.</p>
+
+                <h2>3-Replica WAL And Batch Group Commit</h2>
+                <p>KyteStore metadata mutations follow a strict order: validate against the local index, build a WAL record, append it to a durable log, and only then apply it to the materialized index. If a DS crashes after WAL durability but before index apply, recovery loads the latest checkpoint and replays the WAL.</p>
+                <p>The WAL is not stored in external Redis or FDB. It is written as hidden objects in a KyteStore WRITE_BUFFER namespace. Under the hood, ChunkSubSystem uses <code>AppendChunkReplicated</code> to write through ChunkServer's multi-replica path. The latest benchmark path uses 3 replicas, so committed metadata mutations are protected by a local replicated WAL before checkpoint compaction.</p>
+                <p>To avoid turning every create into a tiny object write, KyteStore uses a DS-level WAL with group commit. Multiple logical metadata records are packed into one physical WAL block in an active segment object. Each record still carries its own <code>inode_bucket_id</code>, bucket-local LSN, and owner epoch, preserving per-bucket ordering and recovery boundaries.</p>
+                <div class="note"><strong>Important detail:</strong> group commit does not wait artificially for a target batch size. A worker drains requests already queued; while one WAL I/O is running, new requests accumulate and are committed in the next batch. This keeps amortized latency low without adding unnecessary foreground delay.</div>
+
+                <h2>Cross-Bucket Rename Transactions</h2>
+                <p>Same-bucket rename remains the fast path: one WAL record moves the dentry while keeping the inode unchanged, without touching MS locks. Only when old and new dentries fall into different buckets does KyteStore enter the transaction slow path.</p>
+                <p>The latest model treats cross-bucket rename as a recoverable metadata transaction. The WAL carries a transaction descriptor with <code>txn_id</code>, participants, affected dentries, affected inodes, old dentry, and new dentry. The phase state moves through prepared, commit decided, applied, aborted, and finished. Pending transactions install local dentry/inode fences and are included in checkpoints, so recovery can roll forward or abort deterministically.</p>
+                <p>The key guardrail is that transaction complexity stays in the rename slow path. Create, unlink, mkdir, lookup, and readdir do not touch MS locks, and same-bucket rename continues to use the single-record WAL fast path.</p>
+
+                <h2>Performance Results</h2>
+                <p>The latest FS metadata operation data below uses one DS node and 32 access threads. Multi-node deployments can theoretically scale by inode bucket and reach millions of QPS. <code>avg_us/op</code> is an amortized value derived from throughput, while WAL p50/p99 are batch flush latencies, so they are measured at different granularities.</p>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table">
+                        <thead>
+                            <tr>
+                                <th>OP</th>
+                                <th>QPS</th>
+                                <th>avg_us/op</th>
+                                <th>WAL p50_us</th>
+                                <th>WAL p99_us</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>create</td>
+                                <td>379,324</td>
+                                <td>2.64</td>
+                                <td>2,114</td>
+                                <td>6,175</td>
+                            </tr>
+                            <tr>
+                                <td>unlink</td>
+                                <td>270,512</td>
+                                <td>3.70</td>
+                                <td>5,973</td>
+                                <td>12,690</td>
+                            </tr>
+                            <tr>
+                                <td>rename, cross-directory</td>
+                                <td>237,571</td>
+                                <td>4.21</td>
+                                <td>3,881</td>
+                                <td>13,024</td>
+                            </tr>
+                            <tr>
+                                <td>mkdir</td>
+                                <td>230,950</td>
+                                <td>4.33</td>
+                                <td>5,299</td>
+                                <td>13,327</td>
+                            </tr>
+                            <tr>
+                                <td>rmdir</td>
+                                <td>N/A</td>
+                                <td>N/A</td>
+                                <td>N/A</td>
+                                <td>N/A</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>The data shows that individual WAL batch flushes are still in milliseconds, but group commit makes the foreground operation cost microsecond-level on average. This is the core tradeoff: reliability comes from the 3-replica WAL, while throughput comes from batching and shard/stream parallelism.</p>
+                <p class="post-footnote">This article focuses on metadata design. The data path, extent maps, and remote object backend integration will be covered separately.</p>
+            </article>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container" data-i18n="footer-p">&copy; 2024 KyteStore. 高性能对象与文件存储加速。北京集智创新科技有限公司。</div>
+    </footer>
+
+    <script>
+    (function () {
+        var T = {
+            en: {
+                'page-title': 'KyteStore Filesystem Metadata Design Choices - KyteStore Blog',
+                'nav-home': 'HOME',
+                'nav-architecture': 'DESIGN',
+                'nav-features': 'FEATURES',
+                'nav-performance': 'BENCHMARK',
+                'nav-deployment': null,
+                'nav-docs': 'DOCS',
+                'nav-blog': 'BLOG',
+                'nav-contact': 'CONTACT',
+                'lang-toggle': '中',
+                'footer-p': '&copy; 2024 KyteStore. High-Performance Object and File Storage Acceleration. JiZhi Innovation Technology Limit.'
+            },
+            zh: {
+                'page-title': 'KyteStore 的 Filesystem 元数据方案选型 - KyteStore 博客',
+                'nav-home': '首页',
+                'nav-architecture': '架构',
+                'nav-features': '功能',
+                'nav-performance': '性能',
+                'nav-deployment': '配置',
+                'nav-docs': '文档',
+                'nav-blog': '博客',
+                'nav-contact': '联系我们',
+                'lang-toggle': 'EN',
+                'footer-p': '&copy; 2024 KyteStore. 高性能对象与文件存储加速。北京集智创新科技有限公司。'
+            }
+        };
+
+        var lang = localStorage.getItem('ks-lang') || 'zh';
+
+        function applyLang(l) {
+            var t = T[l];
+            document.querySelectorAll('[data-i18n]').forEach(function (el) {
+                var key = el.getAttribute('data-i18n');
+                if (t[key] !== undefined) {
+                    if (t[key] === null) {
+                        el.style.display = 'none';
+                    } else {
+                        el.style.display = '';
+                        el.innerHTML = t[key];
+                    }
+                }
+            });
+            document.querySelectorAll('[data-lang-block]').forEach(function (el) {
+                el.hidden = el.getAttribute('data-lang-block') !== l;
+            });
+            document.title = t['page-title'];
+            document.documentElement.setAttribute('lang', l === 'zh' ? 'zh-CN' : 'en');
+        }
+
+        window.toggleLang = function () {
+            lang = lang === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('ks-lang', lang);
+            applyLang(lang);
+        };
+
+        applyLang(lang);
+    }());
+    </script>
+</body>
+</html>
