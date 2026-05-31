@@ -313,6 +313,22 @@
             margin-bottom: 28px;
         }
 
+        .comparison-intro-title {
+            margin-bottom: 8px;
+        }
+
+        .comparison-intro-list {
+            max-width: 920px;
+            margin: 0 0 28px;
+            padding-left: 1.35em;
+            color: var(--text-secondary);
+        }
+
+        .comparison-intro-list li {
+            margin-bottom: 8px;
+            line-height: 1.65;
+        }
+
         .arch-bullets {
             list-style: disc;
             padding-left: 1.4em;
@@ -883,7 +899,12 @@
             <div class="architecture-comparison">
                 <div class="section-title" data-i18n="features-label">功能对比</div>
                 <h2 data-i18n="features-h2">KyteStore 与主流存储系统对比</h2>
-                <p class="comparison-intro" data-i18n="features-desc">KyteStore 适用于以下业务场景：1）写延迟敏感，希望数据写入后即安全；2）成本敏感，希望本地 SSD 能和远端 S3 数据进行灵活同步；3）扩展性敏感，希望性能能够近线性扩展。</p>
+                <p class="comparison-intro comparison-intro-title" data-i18n="features-desc">KyteStore 适用于以下业务场景：</p>
+                <ul class="comparison-intro-list">
+                    <li data-i18n="features-usecase-write">写延迟敏感，希望数据写入后即安全。</li>
+                    <li data-i18n="features-usecase-cost">成本敏感，希望本地 SSD 能和远端 S3 数据进行灵活同步。</li>
+                    <li data-i18n="features-usecase-scale">扩展性敏感，希望性能能够近线性扩展。</li>
+                </ul>
 
                 <div class="table-scroll">
                     <table class="comparison-table">
@@ -1223,7 +1244,10 @@
                 'hero-h1': 'One data foundation for<br><span class="highlight">S3 and POSIX access</span>',
                 'features-label': 'Feature Comparison',
                 'features-h2': 'KyteStore vs. Mainstream Storage Systems',
-                'features-desc': 'KyteStore is suited for workloads that: 1) are write-latency sensitive and need data to be safe immediately after write acknowledgement; 2) are cost sensitive and need local SSDs to synchronize flexibly with remote S3; 3) are scalability sensitive and expect performance to scale nearly linearly.',
+                'features-desc': 'KyteStore is suited for workloads that:',
+                'features-usecase-write': 'Write-latency sensitive workloads that need data to be safe immediately after write acknowledgement.',
+                'features-usecase-cost': 'Cost-sensitive workloads that need local SSDs to synchronize flexibly with remote S3.',
+                'features-usecase-scale': 'Scalability-sensitive workloads that expect performance to scale nearly linearly.',
                 'f1-h3': 'Unified ChunkServer Foundation',
                 'f1-p': 'A single chunk management and data path layer lets object protocols and file semantics share the same high-performance storage foundation.',
                 'f2-h3': 'Replicas and High Availability',
@@ -1377,7 +1401,10 @@
                 'hero-h1': '湖仓系统 和 AI 训推<br><span class="highlight">透明加速存储底座</span>',
                 'features-label': '功能对比',
                 'features-h2': 'KyteStore 与主流存储系统对比',
-                'features-desc': 'KyteStore 适用于以下业务场景：1）写延迟敏感，希望数据写入后即安全；2）成本敏感，希望本地 SSD 能和远端 S3 数据进行灵活同步；3）扩展性敏感，希望性能能够近线性扩展。',
+                'features-desc': 'KyteStore 适用于以下业务场景：',
+                'features-usecase-write': '写延迟敏感，希望数据写入后即安全。',
+                'features-usecase-cost': '成本敏感，希望本地 SSD 能和远端 S3 数据进行灵活同步。',
+                'features-usecase-scale': '扩展性敏感，希望性能能够近线性扩展。',
                 'f1-h3': '统一 ChunkServer 底座',
                 'f1-p': '统一管理 chunk、数据路径和本地盘资源，让对象协议与文件语义共享同一套高性能存储底座。',
                 'f2-h3': '多副本与高可用',
