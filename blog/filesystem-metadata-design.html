@@ -469,11 +469,16 @@
                 <div class="meta">文件系统 · 2026-05-31</div>
                 <h1>KyteStore 的 Filesystem 元数据方案选型</h1>
                 <p class="generated-note">本文使用大模型，基于实际的代码实现自动生成。</p>
-                <p class="lead">Filesystem 元数据设计的核心不是把文件名存在哪里，而是如何在高 QPS、可恢复、可迁移和 POSIX 关键语义之间取舍。KyteStore 的选择是：控制面保持轻量，元数据热路径下沉到 DS inode bucket，并用 KyteStore 自身的多副本对象写入路径承载 WAL。</p>
+
+                <div class="note">
+                    <strong>KyteStore 元数据设计原则：</strong>
+                    尽可能不依赖外部独立数据库系统，避免把网络和中心数据库变成元数据瓶颈；尽可能让常规路径在本地分片内直接快速完成；尽可能把元数据去中心化分散到整个集群的 DataServer 节点中，避免单点吞吐和可用性瓶颈。
+                </div>
 
                 <div class="toc-box">
                     <strong>本文大纲</strong>
                     <ol>
+                        <li>文件系统的逻辑结构</li>
                         <li>文件系统元数据与 POSIX 操作语义</li>
                         <li>跨分片操作的难点</li>
                         <li>主流方案取舍与 KyteStore 的选择</li>
@@ -483,6 +488,80 @@
                         <li>性能测试与横向扩展</li>
                     </ol>
                 </div>
+
+                <h2>文件系统的逻辑结构</h2>
+                <p>理解文件系统元数据，先要把“名字”“文件实体”和“数据块”分开。以 Linux / Ext4 的常见模型为例：VFS 层用 dentry 表达路径名绑定，Ext4 磁盘上用 directory entry 保存目录中的名字到 inode 编号的映射；inode 保存文件类型、权限、大小、时间戳等属性，并通过 extents 描述文件逻辑偏移到物理 data blocks 的映射。</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Ext4-Style Filesystem Logical Structure</div>
+                    <svg viewBox="0 0 900 520" role="img" aria-label="Ext4 文件系统中元数据、dentry、inode、extents 和数据块的关系">
+                        <defs>
+                            <marker id="fs-logic-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+
+                        <rect x="28" y="36" width="844" height="166" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="54" y="68" font-family="Arial" font-size="15" fill="#1F1F1F">Metadata plane</text>
+                        <text x="54" y="92" font-family="Arial" font-size="12" fill="#6B6B6B">负责路径解析、属性、空间管理和恢复，不直接存放用户文件内容</text>
+
+                        <rect x="58" y="120" width="170" height="54" rx="5" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="143" y="143" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">Superblock / Group</text>
+                        <text x="143" y="162" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">全局布局与空间统计</text>
+
+                        <rect x="270" y="120" width="170" height="54" rx="5" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="355" y="143" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">Bitmaps / Journal</text>
+                        <text x="355" y="162" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">分配状态与恢复日志</text>
+
+                        <rect x="482" y="120" width="170" height="54" rx="5" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="567" y="143" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">Directory Entries</text>
+                        <text x="567" y="162" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">name -> inode number</text>
+
+                        <rect x="694" y="120" width="148" height="54" rx="5" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="768" y="143" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">Inode Table</text>
+                        <text x="768" y="162" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">属性与 extents root</text>
+
+                        <rect x="60" y="262" width="210" height="86" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="165" y="292" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Path</text>
+                        <text x="165" y="318" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">/dataset/train.bin</text>
+                        <text x="165" y="338" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">用户看到的是名字</text>
+
+                        <rect x="340" y="250" width="220" height="110" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="450" y="282" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Dentry / Directory Entry</text>
+                        <text x="450" y="308" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">train.bin -> inode 822</text>
+                        <text x="450" y="330" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">VFS dentry 是内存缓存</text>
+                        <text x="450" y="350" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">Ext4 dirent 是磁盘记录</text>
+
+                        <rect x="640" y="250" width="200" height="110" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="740" y="282" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Inode 822</text>
+                        <text x="740" y="308" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">mode / uid / size / mtime</text>
+                        <text x="740" y="330" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">link count</text>
+                        <text x="740" y="350" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">extent tree root</text>
+
+                        <rect x="110" y="420" width="244" height="66" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="232" y="448" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Extents</text>
+                        <text x="232" y="472" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">logical file range -> physical block range</text>
+
+                        <rect x="500" y="408" width="304" height="88" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="652" y="438" text-anchor="middle" font-family="Arial" font-size="15" fill="#6F4B20">Data blocks</text>
+                        <text x="652" y="464" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">真正的文件内容</text>
+                        <text x="652" y="484" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">read/write 主要访问这里</text>
+
+                        <path d="M270 305 H330" stroke="#2F5F8F" stroke-width="2" marker-end="url(#fs-logic-arrow)"></path>
+                        <text x="300" y="292" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">lookup</text>
+
+                        <path d="M560 305 H630" stroke="#2F5F8F" stroke-width="2" marker-end="url(#fs-logic-arrow)"></path>
+                        <text x="595" y="292" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">inode number</text>
+
+                        <path d="M720 360 C690 404, 430 396, 354 444" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#fs-logic-arrow)"></path>
+                        <text x="540" y="402" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">file offset mapping</text>
+
+                        <path d="M354 453 H490" stroke="#2F5F8F" stroke-width="2" marker-end="url(#fs-logic-arrow)"></path>
+                        <text x="422" y="438" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">physical blocks</text>
+                    </svg>
+                </div>
+
+                <p>这张图里，上半部分是文件系统用于管理自己的 metadata，下半部分是一次路径访问如何落到数据块。读写用户数据时，最终要访问 data blocks；但在此之前，系统必须先通过 dentry 找到 inode，再从 inode 中拿到 extents。元数据路径慢，数据路径再快也很难被应用完整利用。</p>
 
                 <h2>文件系统元数据到底管什么</h2>
                 <p>文件系统元数据不只是文件名。一次普通的 <code>open("/a/b/c")</code> 会经历路径拆分、逐级 lookup、dentry 到 inode 的映射、inode attr 读取，随后数据读写还要依赖 extent map 找到文件内容所在的位置。目录遍历需要稳定的 list 视图；<code>mkdir</code>、<code>unlink</code>、<code>rename</code> 则要更新目录可见性、inode 生命周期和恢复状态。</p>
@@ -540,6 +619,59 @@
                 <p>如果所有文件元数据都在一个节点上，rename 的正确性比较直接；但这个模型扩展性很差。KyteStore 把目录项按 <code>parent inode + name</code> 路由到不同 dentry bucket，大目录可以拆到多个 inode bucket 上。这样 lookup 和 create 可以横向扩展，但 rename 会变复杂。</p>
                 <p>一个容易被忽略的点是：跨 bucket 并不等于跨目录。同一个目录下的两个文件名，因为 hash 不同，也可能落在不同 bucket。POSIX rename 又要求 inode identity 不变，不能用“创建一个新 inode 指向旧 extent，再删除旧 inode”的方式代替，否则会破坏 open file handle、inode number、并发读写和 crash recovery 语义。</p>
                 <p>所以元数据系统的难点不是单条 dentry 的增删改，而是当 old binding 和 new binding 位于不同 bucket、甚至不同 DS 时，如何让用户看到一次原子切换，并且在 coordinator 崩溃后仍然能根据 durable state 完成或回滚。</p>
+                <p>从事务角度看，跨分片意味着一次用户操作会拆成多个分片上的子操作。只要其中一个分片成功、另一个分片失败，系统就会进入中间态：老名字可能已经被删除，新名字却没有创建；或者新名字已经可见，老名字还没有删除。更麻烦的是，失败不一定会立刻暴露，可能是网络超时、DS 崩溃、coordinator 崩溃或 WAL 写入后返回前进程退出。没有 transaction state、fencing 和 recovery rule，就很难判断恢复时应该回滚还是继续向前完成。</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Cross-Shard Partial Failure Risk</div>
+                    <svg viewBox="0 0 900 420" role="img" aria-label="跨分片 rename 在部分成功时导致不一致的风险">
+                        <defs>
+                            <marker id="partial-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+
+                        <rect x="38" y="42" width="240" height="118" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="158" y="72" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Source Bucket</text>
+                        <text x="158" y="100" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">old path: /a/file</text>
+                        <text x="158" y="122" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">dentry -> inode 822</text>
+                        <text x="158" y="144" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">准备删除 old binding</text>
+
+                        <rect x="622" y="42" width="240" height="118" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="742" y="72" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Target Bucket</text>
+                        <text x="742" y="100" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">new path: /b/file</text>
+                        <text x="742" y="122" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">target absent</text>
+                        <text x="742" y="144" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">准备创建 new binding</text>
+
+                        <rect x="330" y="56" width="240" height="86" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="450" y="88" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">rename(/a/file, /b/file)</text>
+                        <text x="450" y="114" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">用户期望一次原子切换</text>
+
+                        <path d="M278 102 H320" stroke="#2F5F8F" stroke-width="2" marker-end="url(#partial-arrow)"></path>
+                        <path d="M570 102 H612" stroke="#2F5F8F" stroke-width="2" marker-end="url(#partial-arrow)"></path>
+
+                        <rect x="38" y="242" width="240" height="118" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="158" y="272" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Source Apply Success</text>
+                        <text x="158" y="300" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">old dentry removed</text>
+                        <text x="158" y="322" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">/a/file 不再可见</text>
+                        <text x="158" y="344" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">inode 822 仍存在</text>
+
+                        <rect x="622" y="242" width="240" height="118" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="742" y="272" text-anchor="middle" font-family="Arial" font-size="15" fill="#6F4B20">Target Apply Failed</text>
+                        <text x="742" y="300" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">new dentry not created</text>
+                        <text x="742" y="322" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">/b/file 也不可见</text>
+                        <text x="742" y="344" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">用户看到文件“丢失”</text>
+
+                        <rect x="330" y="252" width="240" height="96" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="450" y="282" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">必须有事务兜底</text>
+                        <text x="450" y="306" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">prepare / commit decision</text>
+                        <text x="450" y="328" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">durable WAL + recovery rule</text>
+
+                        <path d="M158 160 V232" stroke="#2F5F8F" stroke-width="2" marker-end="url(#partial-arrow)"></path>
+                        <path d="M742 160 V232" stroke="#9A6B2F" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#partial-arrow)"></path>
+                        <path d="M278 300 H320" stroke="#2F5F8F" stroke-width="2" marker-end="url(#partial-arrow)"></path>
+                        <path d="M570 300 H612" stroke="#9A6B2F" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#partial-arrow)"></path>
+                    </svg>
+                </div>
 
                 <h2>主流方案取舍</h2>
                 <div class="callout-grid">
@@ -903,7 +1035,7 @@
                 <p>多 DS 场景下，metadata QPS 可以按 inode bucket owner 横向扩展。不同 DS 之间没有共享的 metadata 写入瓶颈，也不需要在普通 create/unlink/mkdir 路径上互相协调，因此做到数百万级 metadata QPS 相对直接。WAL 延迟看起来在毫秒级，主要来源于三副本 Chunk 写入：一次 batch WAL 必须等待全部 replica append 成功后才能返回；但 group commit 会把这次成本摊到大量前台 metadata 操作上。</p>
 
                 <div class="table-wrap">
-                    <table class="benchmark-table">
+                    <table class="benchmark-table metadata-table">
                         <thead>
                             <tr>
                                 <th>OP</th>
@@ -955,11 +1087,16 @@
                 <div class="meta">Filesystem · 2026-05-31</div>
                 <h1>KyteStore Filesystem Metadata Design Choices</h1>
                 <p class="generated-note">Generated with a large language model based on the actual code implementation.</p>
-                <p class="lead">Filesystem metadata design is not just a question of where to store filenames. The real tradeoff is how to balance high QPS, durability, migration, and the POSIX semantics users actually rely on. KyteStore keeps the control plane light, moves the hot path to DS inode buckets, and persists metadata WAL through KyteStore's own replicated object path.</p>
+
+                <div class="note">
+                    <strong>KyteStore metadata design principles:</strong>
+                    avoid depending on an external standalone database system whenever possible, so metadata does not bottleneck on network hops or a central database; keep normal-path operations fast and local to metadata shards; decentralize metadata across DataServer nodes to avoid single-node throughput and availability limits.
+                </div>
 
                 <div class="toc-box">
                     <strong>Outline</strong>
                     <ol>
+                        <li>Filesystem logical structure</li>
                         <li>Filesystem metadata and POSIX operation semantics</li>
                         <li>Why cross-shard operations are hard</li>
                         <li>Main design choices and KyteStore's decision</li>
@@ -969,6 +1106,80 @@
                         <li>Performance and horizontal scaling</li>
                     </ol>
                 </div>
+
+                <h2>Filesystem Logical Structure</h2>
+                <p>To understand filesystem metadata, separate names, file entities, and data blocks. In a typical Linux / Ext4 model, the VFS layer uses dentries to represent pathname bindings, while Ext4 stores on-disk directory entries that map names to inode numbers. Inodes hold attributes such as type, permissions, size, and timestamps, and extents map logical file ranges to physical data blocks.</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Ext4-Style Filesystem Logical Structure</div>
+                    <svg viewBox="0 0 900 520" role="img" aria-label="Relationship between filesystem metadata, dentry, inode, extents, and data blocks">
+                        <defs>
+                            <marker id="fs-logic-arrow-en" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+
+                        <rect x="28" y="36" width="844" height="166" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="54" y="68" font-family="Arial" font-size="15" fill="#1F1F1F">Metadata plane</text>
+                        <text x="54" y="92" font-family="Arial" font-size="12" fill="#6B6B6B">Path resolution, attributes, allocation, and recovery state</text>
+
+                        <rect x="58" y="120" width="170" height="54" rx="5" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="143" y="143" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">Superblock / Group</text>
+                        <text x="143" y="162" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">layout and counters</text>
+
+                        <rect x="270" y="120" width="170" height="54" rx="5" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="355" y="143" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">Bitmaps / Journal</text>
+                        <text x="355" y="162" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">allocation and recovery</text>
+
+                        <rect x="482" y="120" width="170" height="54" rx="5" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="567" y="143" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">Directory Entries</text>
+                        <text x="567" y="162" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">name -> inode number</text>
+
+                        <rect x="694" y="120" width="148" height="54" rx="5" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="768" y="143" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">Inode Table</text>
+                        <text x="768" y="162" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">attributes + extents</text>
+
+                        <rect x="60" y="262" width="210" height="86" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="165" y="292" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Path</text>
+                        <text x="165" y="318" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">/dataset/train.bin</text>
+                        <text x="165" y="338" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">what users see</text>
+
+                        <rect x="340" y="250" width="220" height="110" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="450" y="282" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Dentry / Directory Entry</text>
+                        <text x="450" y="308" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">train.bin -> inode 822</text>
+                        <text x="450" y="330" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">VFS dentry: in-memory cache</text>
+                        <text x="450" y="350" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">Ext4 dirent: on-disk record</text>
+
+                        <rect x="640" y="250" width="200" height="110" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="740" y="282" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Inode 822</text>
+                        <text x="740" y="308" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">mode / uid / size / mtime</text>
+                        <text x="740" y="330" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">link count</text>
+                        <text x="740" y="350" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">extent tree root</text>
+
+                        <rect x="110" y="420" width="244" height="66" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="232" y="448" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Extents</text>
+                        <text x="232" y="472" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">logical range -> physical blocks</text>
+
+                        <rect x="500" y="408" width="304" height="88" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="652" y="438" text-anchor="middle" font-family="Arial" font-size="15" fill="#6F4B20">Data blocks</text>
+                        <text x="652" y="464" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">actual file bytes</text>
+                        <text x="652" y="484" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">read/write eventually lands here</text>
+
+                        <path d="M270 305 H330" stroke="#2F5F8F" stroke-width="2" marker-end="url(#fs-logic-arrow-en)"></path>
+                        <text x="300" y="292" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">lookup</text>
+
+                        <path d="M560 305 H630" stroke="#2F5F8F" stroke-width="2" marker-end="url(#fs-logic-arrow-en)"></path>
+                        <text x="595" y="292" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">inode number</text>
+
+                        <path d="M720 360 C690 404, 430 396, 354 444" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#fs-logic-arrow-en)"></path>
+                        <text x="540" y="402" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">file offset mapping</text>
+
+                        <path d="M354 453 H490" stroke="#2F5F8F" stroke-width="2" marker-end="url(#fs-logic-arrow-en)"></path>
+                        <text x="422" y="438" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">physical blocks</text>
+                    </svg>
+                </div>
+
+                <p>In this diagram, the upper layer is filesystem metadata, while the lower path shows how a pathname eventually reaches data blocks. User reads and writes ultimately access data blocks, but the system must first resolve the dentry, load the inode, and follow extents. If the metadata path is slow, the data path cannot be fully utilized.</p>
 
                 <h2>What Filesystem Metadata Does</h2>
                 <p>Filesystem metadata is more than filenames. A normal <code>open("/a/b/c")</code> walks path components, resolves dentry to inode, loads inode attributes, and eventually uses extent maps to find data. Directory listing needs a stable view. <code>mkdir</code>, <code>unlink</code>, and <code>rename</code> must update visibility, inode lifecycle, and recovery state.</p>
@@ -1025,6 +1236,59 @@
                 <h2>The Hard Part: Cross-Shard Operations</h2>
                 <p>With one metadata node, rename correctness is straightforward, but the model does not scale. KyteStore routes dentries by <code>parent inode + name</code> into dentry buckets, allowing large directories to spread across inode buckets. Lookup and create can scale out, but rename becomes harder.</p>
                 <p>Cross-bucket does not necessarily mean cross-directory. Two names in the same directory can hash into different buckets. POSIX rename also requires inode identity to remain unchanged. Creating a new inode that points to old extents and then deleting the old inode would break inode numbers, open file handles, concurrent access, and crash recovery semantics.</p>
+                <p>From a transaction perspective, cross-shard means that one user operation becomes multiple shard-local sub-operations. If one shard succeeds while another fails, the system enters an intermediate state: the old name may already be removed while the new name is not created, or the new name may be visible while the old name still exists. The failure may be a network timeout, DS crash, coordinator crash, or process exit after a WAL append but before the response. Without transaction state, fencing, and recovery rules, recovery cannot safely decide whether to roll back or roll forward.</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Cross-Shard Partial Failure Risk</div>
+                    <svg viewBox="0 0 900 420" role="img" aria-label="Cross-shard rename partial failure risk">
+                        <defs>
+                            <marker id="partial-arrow-en" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+
+                        <rect x="38" y="42" width="240" height="118" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="158" y="72" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Source Bucket</text>
+                        <text x="158" y="100" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">old path: /a/file</text>
+                        <text x="158" y="122" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">dentry -> inode 822</text>
+                        <text x="158" y="144" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">will remove old binding</text>
+
+                        <rect x="622" y="42" width="240" height="118" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="742" y="72" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Target Bucket</text>
+                        <text x="742" y="100" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">new path: /b/file</text>
+                        <text x="742" y="122" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">target absent</text>
+                        <text x="742" y="144" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">will create new binding</text>
+
+                        <rect x="330" y="56" width="240" height="86" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="450" y="88" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">rename(/a/file, /b/file)</text>
+                        <text x="450" y="114" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">user expects one atomic switch</text>
+
+                        <path d="M278 102 H320" stroke="#2F5F8F" stroke-width="2" marker-end="url(#partial-arrow-en)"></path>
+                        <path d="M570 102 H612" stroke="#2F5F8F" stroke-width="2" marker-end="url(#partial-arrow-en)"></path>
+
+                        <rect x="38" y="242" width="240" height="118" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="158" y="272" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Source Apply Success</text>
+                        <text x="158" y="300" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">old dentry removed</text>
+                        <text x="158" y="322" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">/a/file is gone</text>
+                        <text x="158" y="344" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">inode 822 still exists</text>
+
+                        <rect x="622" y="242" width="240" height="118" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="742" y="272" text-anchor="middle" font-family="Arial" font-size="15" fill="#6F4B20">Target Apply Failed</text>
+                        <text x="742" y="300" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">new dentry missing</text>
+                        <text x="742" y="322" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">/b/file is missing</text>
+                        <text x="742" y="344" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">file appears lost</text>
+
+                        <rect x="330" y="252" width="240" height="96" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="450" y="282" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Transaction Required</text>
+                        <text x="450" y="306" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">prepare / commit decision</text>
+                        <text x="450" y="328" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">durable WAL + recovery rule</text>
+
+                        <path d="M158 160 V232" stroke="#2F5F8F" stroke-width="2" marker-end="url(#partial-arrow-en)"></path>
+                        <path d="M742 160 V232" stroke="#9A6B2F" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#partial-arrow-en)"></path>
+                        <path d="M278 300 H320" stroke="#2F5F8F" stroke-width="2" marker-end="url(#partial-arrow-en)"></path>
+                        <path d="M570 300 H612" stroke="#9A6B2F" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#partial-arrow-en)"></path>
+                    </svg>
+                </div>
 
                 <h2>Main Design Choices</h2>
                 <div class="callout-grid">
