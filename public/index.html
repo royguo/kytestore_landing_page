@@ -1058,12 +1058,12 @@
                         </tr>
                         <tr>
                             <td class="feature-name" data-i18n="cmp-row-posix">POSIX 协议</td>
-                            <td class="advantage" data-i18n="cmp-yes">支持</td>
-                            <td class="advantage">FUSE</td>
-                            <td class="advantage" data-i18n="cmp-yes">支持</td>
-                            <td class="advantage">CephFS</td>
-                            <td data-i18n="cmp-no">不支持</td>
-                            <td class="advantage">FUSE</td>
+                            <td class="advantage" data-i18n="cmp-posix-full">完全兼容</td>
+                            <td data-i18n="cmp-posix-basic">基本兼容</td>
+                            <td class="advantage" data-i18n="cmp-posix-full">完全兼容</td>
+                            <td class="advantage" data-i18n="cmp-posix-full">完全兼容</td>
+                            <td data-i18n="cmp-posix-incompatible">不兼容</td>
+                            <td data-i18n="cmp-posix-basic">基本兼容</td>
                         </tr>
                         <tr>
                             <td class="feature-name" data-i18n="cmp-row-hdfs">HDFS 协议</td>
@@ -1085,12 +1085,12 @@
                         </tr>
                         <tr>
                             <td class="feature-name" data-i18n="cmp-row-reliability">可靠性模型</td>
-                            <td class="advantage" data-i18n="cmp-rely-kyte">Chunk 多副本</td>
-                            <td data-i18n="cmp-rely-alluxio">配置副本</td>
-                            <td data-i18n="cmp-rely-juicefs">依赖本地盘/后端</td>
-                            <td class="advantage" data-i18n="cmp-rely-ceph">副本/EC</td>
-                            <td class="advantage">EC</td>
-                            <td class="advantage" data-i18n="cmp-rely-seaweed">副本/EC</td>
+                            <td class="advantage" data-i18n="cmp-rely-kyte">多副本</td>
+                            <td class="advantage" data-i18n="cmp-rely-alluxio">可配置多副本</td>
+                            <td data-i18n="cmp-rely-juicefs">无本地 HA</td>
+                            <td class="advantage" data-i18n="cmp-rely-ceph">多副本/EC</td>
+                            <td class="advantage" data-i18n="cmp-rely-minio">EC</td>
+                            <td class="advantage" data-i18n="cmp-rely-seaweed">EC/多副本</td>
                         </tr>
                         <tr>
                             <td class="feature-name" data-i18n="cmp-row-fit">最适合场景</td>
@@ -1490,6 +1490,9 @@
                 'cmp-row-s3': 'S3',
                 'cmp-yes': 'Yes',
                 'cmp-row-posix': 'POSIX',
+                'cmp-posix-full': 'Fully compatible',
+                'cmp-posix-basic': 'Mostly compatible',
+                'cmp-posix-incompatible': 'Incompatible',
                 'cmp-row-hdfs': 'HDFS',
                 'cmp-dev': 'In development',
                 'cmp-row-remote': 'Remote S3 backend',
@@ -1498,12 +1501,13 @@
                 'cmp-remote-juicefs': 'Supported',
                 'cmp-non-primary': 'Not primary mode',
                 'cmp-remote-seaweed': 'Backup / tiering',
-                'cmp-row-reliability': 'Reliability',
-                'cmp-rely-kyte': 'Chunk replicas',
-                'cmp-rely-alluxio': 'Configured replicas',
-                'cmp-rely-juicefs': 'Local disk / backend',
+                'cmp-row-reliability': 'Local SSD reliability',
+                'cmp-rely-kyte': 'Replicas',
+                'cmp-rely-alluxio': 'Configurable replicas',
+                'cmp-rely-juicefs': 'No local HA',
                 'cmp-rely-ceph': 'Replicas / EC',
-                'cmp-rely-seaweed': 'Replicas / EC',
+                'cmp-rely-minio': 'EC',
+                'cmp-rely-seaweed': 'EC / replicas',
                 'cmp-row-fit': 'Best fit',
                 'cmp-fit-kyte': 'Lakehouse + AI accel',
                 'cmp-fit-alluxio': 'Read-heavy cache',
@@ -1682,6 +1686,9 @@
                 'cmp-row-s3': 'S3 协议',
                 'cmp-yes': '支持',
                 'cmp-row-posix': 'POSIX 协议',
+                'cmp-posix-full': '完全兼容',
+                'cmp-posix-basic': '基本兼容',
+                'cmp-posix-incompatible': '不兼容',
                 'cmp-row-hdfs': 'HDFS 协议',
                 'cmp-dev': '正在开发',
                 'cmp-row-remote': '远端 S3 后端',
@@ -1690,12 +1697,13 @@
                 'cmp-remote-juicefs': '支持',
                 'cmp-non-primary': '非主要模式',
                 'cmp-remote-seaweed': '云备份/分层',
-                'cmp-row-reliability': '可靠性模型',
-                'cmp-rely-kyte': 'Chunk 多副本',
-                'cmp-rely-alluxio': '配置副本',
-                'cmp-rely-juicefs': '依赖本地盘/后端',
-                'cmp-rely-ceph': '副本/EC',
-                'cmp-rely-seaweed': '副本/EC',
+                'cmp-row-reliability': '本地 SSD 可靠性',
+                'cmp-rely-kyte': '多副本',
+                'cmp-rely-alluxio': '可配置多副本',
+                'cmp-rely-juicefs': '无本地 HA',
+                'cmp-rely-ceph': '多副本/EC',
+                'cmp-rely-minio': 'EC',
+                'cmp-rely-seaweed': 'EC/多副本',
                 'cmp-row-fit': '最适合场景',
                 'cmp-fit-kyte': '湖仓+AI 加速',
                 'cmp-fit-alluxio': '读密集缓存',
