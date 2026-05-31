@@ -120,6 +120,55 @@
             border-color: var(--accent);
         }
 
+        .nav-toggle,
+        .nav-close {
+            display: none;
+            appearance: none;
+            background: none;
+            border: 1px solid var(--border-strong);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .nav-toggle {
+            width: 40px;
+            height: 36px;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .nav-toggle span {
+            display: block;
+            width: 18px;
+            height: 2px;
+            background: currentColor;
+        }
+
+        .nav-close {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            width: 36px;
+            height: 36px;
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .nav-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 29;
+            background: rgba(31, 31, 31, 0.28);
+        }
+
+        body.nav-open {
+            overflow: hidden;
+        }
+
         .article-shell {
             padding: 72px 0 96px;
         }
@@ -377,30 +426,68 @@
             }
 
             .header-content {
-                flex-direction: column;
-                gap: 16px;
+                flex-direction: row;
+                gap: 0;
+            }
+
+            .nav-toggle {
+                display: flex;
+            }
+
+            .nav-backdrop.open {
+                display: block;
             }
 
             nav {
+                position: fixed;
+                top: 0;
+                right: 0;
+                z-index: 30;
                 display: flex;
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 6px;
-                width: calc(100vw - 40px);
-                max-width: calc(100vw - 40px);
-                align-self: stretch;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: flex-start;
+                gap: 0;
+                width: min(320px, calc(100vw - 56px));
+                max-width: none;
+                height: 100vh;
+                padding: 72px 28px 28px;
+                border-left: 1px solid var(--border);
+                background: var(--bg-primary);
+                box-shadow: -18px 0 40px rgba(31, 31, 31, 0.12);
+                overflow-y: auto;
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transform: none;
+                transition: opacity 0.22s ease, visibility 0s linear 0.22s;
+                align-self: auto;
+            }
+
+            nav.open {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+                transition-delay: 0s;
+            }
+
+            .nav-close {
+                display: block;
             }
 
             nav a {
                 margin-left: 0;
-                padding: 5px 7px;
-                font-size: 11px;
+                width: 100%;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--border);
+                font-size: 13px;
             }
 
             #lang-toggle {
-                margin-left: 0;
-                padding: 5px 7px;
-                font-size: 11px;
+                align-self: flex-start;
+                margin: 18px 0 0;
+                padding: 8px 12px;
+                font-size: 12px;
             }
 
             .article-shell {
@@ -447,7 +534,14 @@
         <div class="container">
             <div class="header-content">
                 <a class="logo" href="../index.html">Kyte<span>Store</span></a>
-                <nav aria-label="主导航">
+                <button class="nav-toggle" type="button" aria-label="打开导航" aria-controls="site-nav" aria-expanded="false" onclick="toggleNav()">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="nav-backdrop" onclick="closeNav()" aria-hidden="true"></div>
+                <nav id="site-nav" aria-label="主导航">
+                    <button class="nav-close" type="button" aria-label="关闭导航" onclick="closeNav()">&times;</button>
                     <a href="../index.html" data-i18n="nav-home">首页</a>
                     <a href="../index.html#architecture" data-i18n="nav-architecture">架构</a>
                     <a href="../index.html#features" data-i18n="nav-features">功能</a>
@@ -1467,6 +1561,47 @@
             document.title = t['page-title'];
             document.documentElement.setAttribute('lang', l === 'zh' ? 'zh-CN' : 'en');
         }
+
+        var nav = document.getElementById('site-nav');
+        var navToggle = document.querySelector('.nav-toggle');
+        var navBackdrop = document.querySelector('.nav-backdrop');
+
+        window.closeNav = function () {
+            if (!nav) return;
+            nav.classList.remove('open');
+            document.body.classList.remove('nav-open');
+            if (navBackdrop) navBackdrop.classList.remove('open');
+            if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
+        };
+
+        window.toggleNav = function () {
+            if (!nav) return;
+            if (navToggle && window.getComputedStyle(navToggle).display === 'none') {
+                window.closeNav();
+                return;
+            }
+            var willOpen = !nav.classList.contains('open');
+            nav.classList.toggle('open', willOpen);
+            document.body.classList.toggle('nav-open', willOpen);
+            if (navBackdrop) navBackdrop.classList.toggle('open', willOpen);
+            if (navToggle) navToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        };
+
+        if (nav) {
+            nav.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', window.closeNav);
+            });
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') window.closeNav();
+        });
+
+        window.addEventListener('resize', function () {
+            if (navToggle && window.getComputedStyle(navToggle).display === 'none') {
+                window.closeNav();
+            }
+        });
 
         window.toggleLang = function () {
             lang = lang === 'zh' ? 'en' : 'zh';
