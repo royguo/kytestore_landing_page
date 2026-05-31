@@ -187,6 +187,12 @@
             color: var(--text);
         }
 
+        h4 {
+            margin: 24px 0 10px;
+            font-size: 17px;
+            color: var(--accent);
+        }
+
         p {
             max-width: 860px;
             margin-bottom: 14px;
@@ -283,7 +289,7 @@
         }
 
         .info-box h4 {
-            margin-bottom: 8px;
+            margin: 0 0 8px;
             color: var(--accent);
             font-size: 17px;
             font-weight: 700;
@@ -338,6 +344,12 @@
         .role-table th:first-child,
         .role-table td:first-child {
             width: 150px;
+            white-space: nowrap;
+        }
+
+        .deployment-table th:first-child,
+        .deployment-table td:first-child {
+            width: 140px;
             white-space: nowrap;
         }
 
@@ -469,6 +481,7 @@
                     <a class="toc-child" href="#overview-problem">解决的问题</a>
                     <a class="toc-child" href="#overview-scenarios">典型场景</a>
                     <a class="toc-child" href="#overview-capabilities">能力地图</a>
+                    <a class="toc-child" href="#overview-deployment">部署和使用</a>
                 </div>
                 <div class="toc-group">
                     <a class="toc-title" href="#architecture">2. 整体架构</a>
@@ -587,6 +600,127 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <div id="overview-deployment" class="section-block">
+                    <h3>部署和使用</h3>
+                    <p>KyteStore 可以从单机模拟集群开始验证，也可以按 FE、DataServer、MetaServer、FoundationDB 控制面和本地 SSD 资源拆分为生产集群。用户侧接入时不需要改写业务逻辑：湖仓和分析系统继续使用 S3 Endpoint，AI 训练和推理任务继续使用文件路径，底层由 KyteStore 负责本地 SSD 加速、多副本保护和远端 S3 同步。</p>
+
+                    <h4>单机部署配置建议</h4>
+                    <p>单机部署适合 PoC、功能验证、开发测试和小规模低并发使用。此模式通常把 FE、DS、MS 和 FDB 放在同一台服务器上，部署简单，但不建议作为高可用生产架构。</p>
+                    <table class="deployment-table">
+                        <thead>
+                            <tr>
+                                <th>档位</th>
+                                <th>CPU</th>
+                                <th>内存</th>
+                                <th>SSD</th>
+                                <th>网络</th>
+                                <th>适用场景</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>最低配置</td>
+                                <td>8 vCPU</td>
+                                <td>32 GiB</td>
+                                <td>500 GB SSD</td>
+                                <td>1 Gbps</td>
+                                <td>功能验证、开发测试、低并发 PoC。</td>
+                            </tr>
+                            <tr>
+                                <td>推荐配置</td>
+                                <td>16 vCPU</td>
+                                <td>64 GiB</td>
+                                <td>1 TB NVMe</td>
+                                <td>10 Gbps</td>
+                                <td>小规模正式使用、稳定读写加速。</td>
+                            </tr>
+                            <tr>
+                                <td>性能配置</td>
+                                <td>32 vCPU</td>
+                                <td>128 GiB</td>
+                                <td>2-4 TB NVMe</td>
+                                <td>25 Gbps</td>
+                                <td>更高并发、较大缓存、持续写入场景。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>集群部署配置建议</h4>
+                    <p>生产环境建议把数据面和控制面分开规划。FE 负责 S3/文件协议入口和请求路由，DS 负责本地缓存、写缓冲、ChunkServer 多副本和文件元数据热路径，MS/FDB 负责集群控制面和全局元数据。</p>
+                    <table class="deployment-table">
+                        <thead>
+                            <tr>
+                                <th>档位</th>
+                                <th>典型拓扑</th>
+                                <th>FE 节点规格</th>
+                                <th>DS 节点规格</th>
+                                <th>网络</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>最低配置</td>
+                                <td>1 FE + 2 DS + 1 控制面</td>
+                                <td>4 vCPU / 8 GiB / 100 GB SSD</td>
+                                <td>8 vCPU / 32 GiB / 1 TB SSD</td>
+                                <td>10 Gbps</td>
+                            </tr>
+                            <tr>
+                                <td>推荐配置</td>
+                                <td>2 FE + 3 DS + 3 控制面</td>
+                                <td>8 vCPU / 16 GiB / 100 GB SSD</td>
+                                <td>16 vCPU / 64 GiB / 2 TB NVMe</td>
+                                <td>10-25 Gbps</td>
+                            </tr>
+                            <tr>
+                                <td>性能配置</td>
+                                <td>2-4 FE + 6+ DS + 3 控制面</td>
+                                <td>16 vCPU / 32 GiB / 200 GB SSD</td>
+                                <td>32 vCPU / 128 GiB / 4+ TB NVMe</td>
+                                <td>25 Gbps+</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>对象和文件接入方式</h4>
+                    <table class="deployment-table">
+                        <thead>
+                            <tr>
+                                <th>接入方式</th>
+                                <th>用户侧改动</th>
+                                <th>推荐模式</th>
+                                <th>关键说明</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>S3 兼容对象协议</td>
+                                <td>把湖仓、查询引擎或 S3 SDK 的 Endpoint 指向 KyteStore FE。</td>
+                                <td>read_cache 或 read_write / mixed。</td>
+                                <td>适合 ClickHouse、Doris、DuckDB、StarRocks 等系统读取热对象，也适合写入后需要快速读回的 checkpoint 或中间结果。</td>
+                            </tr>
+                            <tr>
+                                <td>POSIX 文件语义</td>
+                                <td>通过 POSIX/FUSE 入口挂载到业务机器，应用继续使用路径、目录和文件 API。</td>
+                                <td>local_only 或 mixed。</td>
+                                <td>适合 AI 训练、推理、脚本任务和小文件元数据密集场景；文件数据仍复用底层 ChunkServer 写入和缓存能力。</td>
+                            </tr>
+                            <tr>
+                                <td>远端 S3 数据层</td>
+                                <td>配置后端 S3/COS/OSS bucket 和凭证，或通过请求级 Header 传入后端身份。</td>
+                                <td>mixed。</td>
+                                <td>本地 SSD 承担热数据和写缓冲，远端对象存储承担容量层和长期存储，适合成本敏感业务。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <ul>
+                        <li>DS 是资源消耗最大的角色，CPU、内存和本地 NVMe 性能会直接影响缓存命中、写缓冲和文件元数据吞吐。</li>
+                        <li>控制面建议至少准备 3 个 FDB coordinator；MS 可以与其中一台控制面节点同机部署。</li>
+                        <li>写入加速场景优先增加 DS 数量和本地盘容量；接入和转发压力更高时再增加 FE 节点。</li>
+                    </ul>
                 </div>
             </section>
 
