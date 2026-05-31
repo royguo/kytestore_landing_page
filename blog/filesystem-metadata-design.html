@@ -306,7 +306,7 @@
 
         .callout-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
             gap: 16px;
             margin: 28px 0;
         }
@@ -315,6 +315,15 @@
             border: 1px solid var(--border);
             background: var(--bg-secondary);
             padding: 18px;
+        }
+
+        .callout.featured {
+            border-color: var(--accent);
+            background: #EEF5FB;
+        }
+
+        .callout.featured strong {
+            color: var(--accent-dim);
         }
 
         .callout strong {
@@ -459,19 +468,63 @@
                 <div class="toc-box">
                     <strong>本文大纲</strong>
                     <ol>
-                        <li>文件系统元数据的用途</li>
-                        <li>真正困难的部分：跨分片操作</li>
-                        <li>主流方案取舍</li>
-                        <li>KyteStore 的 inode bucket 架构</li>
+                        <li>文件系统元数据与 POSIX 操作语义</li>
+                        <li>跨分片操作的难点</li>
+                        <li>主流方案取舍与 KyteStore 的选择</li>
+                        <li>KyteStore 的 inode bucket 架构与 4K bucket 规模</li>
                         <li>3 副本 WAL 与 batch group commit</li>
                         <li>跨 bucket rename 的 transaction 模型</li>
-                        <li>性能测试数据</li>
+                        <li>性能测试与横向扩展</li>
                     </ol>
                 </div>
 
                 <h2>文件系统元数据到底管什么</h2>
                 <p>文件系统元数据不只是文件名。一次普通的 <code>open("/a/b/c")</code> 会经历路径拆分、逐级 lookup、dentry 到 inode 的映射、inode attr 读取，随后数据读写还要依赖 extent map 找到文件内容所在的位置。目录遍历需要稳定的 list 视图；<code>mkdir</code>、<code>unlink</code>、<code>rename</code> 则要更新目录可见性、inode 生命周期和恢复状态。</p>
                 <p>在 AI 数据集和湖仓工作负载里，文件可能很大，也可能非常碎。大文件读写会把瓶颈推到数据路径，而大量小文件、checkpoint publish、训练脚本反复扫描目录时，元数据路径往往更早成为上限。因此 KyteStore 的 FS Subsystem 必须把 lookup/create/rename 这类操作当成一等性能路径，而不是把它们放到一个中心数据库里“能跑就行”。</p>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table">
+                        <thead>
+                            <tr>
+                                <th>POSIX 元数据操作</th>
+                                <th>核心语义</th>
+                                <th>常见实现方案</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>lookup / open</td>
+                                <td>按路径逐级解析目录项，找到 dentry 指向的 inode。</td>
+                                <td>目录 hash table、B+Tree / LSM 本地索引，或集中式 KV 保存 parent/name 到 inode 的映射。</td>
+                            </tr>
+                            <tr>
+                                <td>getattr / stat</td>
+                                <td>读取 inode 类型、权限、size、mtime、link count 等属性。</td>
+                                <td>inode table、local metadata shard、集中式 metadata service 或本地 materialized view。</td>
+                            </tr>
+                            <tr>
+                                <td>readdir / list</td>
+                                <td>稳定列出一个目录下的 dentry，并支持 cursor / pagination。</td>
+                                <td>目录分片扫描后 merge，或单目录 shard 内顺序遍历；大目录通常需要 fanout。</td>
+                            </tr>
+                            <tr>
+                                <td>create / mkdir</td>
+                                <td>在 parent 目录中新增 dentry，并分配新的 child inode。</td>
+                                <td>单分片事务、WAL-first mutation、集中式事务，或 dentry shard + inode range allocator。</td>
+                            </tr>
+                            <tr>
+                                <td>unlink / rmdir</td>
+                                <td>删除目录项，更新 inode 生命周期；目录删除还要校验 empty。</td>
+                                <td>dentry tombstone、reference/link count、后台 GC；强一致系统通常先写 WAL 再更新索引。</td>
+                            </tr>
+                            <tr>
+                                <td>rename</td>
+                                <td>原子地把 old dentry 切换到 new dentry，保持 inode identity 不变。</td>
+                                <td>同分片单 WAL；跨分片需要 lock/intent、transaction WAL、recovery roll-forward 或集中式事务。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
                 <h2>真正困难的部分：跨分片操作</h2>
                 <p>如果所有文件元数据都在一个节点上，rename 的正确性比较直接；但这个模型扩展性很差。KyteStore 把目录项按 <code>parent inode + name</code> 路由到不同 dentry bucket，大目录可以拆到多个 inode bucket 上。这样 lookup 和 create 可以横向扩展，但 rename 会变复杂。</p>
@@ -492,8 +545,12 @@
                         <strong>精简语义</strong>
                         <span>拒绝跨目录 rename、拒绝 target replace、弱化 readdir 或 directory mutation。短期容易上线，但会把实现边界暴露给用户和上层框架。</span>
                     </div>
+                    <div class="callout featured">
+                        <strong>KyteStore 的选择</strong>
+                        <span>控制面只保存 owner、epoch、range 和 fencing；热路径下沉到 DS inode bucket，用本地索引提供吞吐，用多副本 WAL 保证恢复。</span>
+                    </div>
                 </div>
-                <p>KyteStore 不把完整 file metadata 放进 MetaServer/FDB。MS/FDB 更适合做 FS binding、inode bucket owner map、owner epoch、inode range allocation 和少量 transaction lock。高频 dentry、inode attr、extent map 则由 DS FSSubsystem 的 inode bucket owner 承担。</p>
+                <p>KyteStore 不把完整 file metadata 放进 MetaServer/FDB。MS/FDB 更适合做 FS binding、inode bucket owner map、owner epoch、inode range allocation 和少量 transaction lock。高频 dentry、inode attr、extent map 则由 DS FSSubsystem 的 inode bucket owner 承担。这相当于在“集中式控制面”和“去中心化数据面”之间做切分：控制面保持小而稳定，元数据热路径按 bucket 横向扩展。</p>
 
                 <h2>KyteStore 的 inode bucket 架构</h2>
                 <p>KyteStore 的恢复和扩展单位是 inode bucket。一个 inode bucket 拥有自己的 owner epoch、WAL、checkpoint、materialized index 和恢复边界。FE/SDK 或 DS path RPC 根据 DirectoryLayout 将 <code>parent inode + filename</code> 映射到具体 dentry bucket，再发给当前 owner DS。</p>
@@ -580,50 +637,93 @@
                         <text x="135" y="138" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">operation = create</text>
 
                         <rect x="306" y="46" width="282" height="96" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
-                        <text x="447" y="78" text-anchor="middle" font-family="Arial" font-size="14" fill="#1E4A6E">bucket_index</text>
+                        <text x="447" y="78" text-anchor="middle" font-family="Arial" font-size="14" fill="#1E4A6E">virtual bucket index</text>
                         <text x="447" y="104" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">hash(parent_inode, name, seed)</text>
-                        <text x="447" y="124" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">% inode_bucket_size</text>
+                        <text x="447" y="124" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">% virtual_bucket_count</text>
 
                         <rect x="90" y="216" width="720" height="88" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
-                        <text x="450" y="244" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">DirectoryLayout(100): bucket_index -> inode_bucket_id</text>
+                        <text x="450" y="244" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">DirectoryLayout(100): virtual bucket -> physical bucket</text>
                         <rect x="126" y="264" width="190" height="24" rx="3" fill="#DDECF7" stroke="#2F5F8F"></rect>
                         <rect x="316" y="264" width="268" height="24" rx="3" fill="#EAF3EA" stroke="#4B7F52"></rect>
                         <rect x="584" y="264" width="190" height="24" rx="3" fill="#F5EBDD" stroke="#9A6B2F"></rect>
-                        <text x="221" y="281" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">index 0-3 -> bucket 17</text>
-                        <text x="450" y="281" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5D35">index 4-9 -> bucket 23</text>
-                        <text x="679" y="281" text-anchor="middle" font-family="Arial" font-size="12" fill="#6F4B20">index 10-15 -> bucket 31</text>
+                        <text x="221" y="281" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">vBucket 0-3 -> pBucket 17</text>
+                        <text x="450" y="281" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5D35">vBucket 4-9 -> pBucket 23</text>
+                        <text x="679" y="281" text-anchor="middle" font-family="Arial" font-size="12" fill="#6F4B20">vBucket 10-15 -> pBucket 31</text>
 
                         <rect x="88" y="374" width="214" height="104" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
-                        <text x="195" y="404" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">InodeBucket 17</text>
+                        <text x="195" y="404" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Physical Bucket 17</text>
                         <text x="195" y="428" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">owner DS-A</text>
                         <text x="195" y="450" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">WAL + checkpoint + index</text>
 
                         <rect x="344" y="374" width="214" height="104" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
-                        <text x="451" y="404" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">InodeBucket 23</text>
+                        <text x="451" y="404" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Physical Bucket 23</text>
                         <text x="451" y="428" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">owner DS-B</text>
                         <text x="451" y="450" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">写 dentry，分配 child inode</text>
 
                         <rect x="600" y="374" width="214" height="104" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
-                        <text x="707" y="404" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">InodeBucket 31</text>
+                        <text x="707" y="404" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Physical Bucket 31</text>
                         <text x="707" y="428" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">owner DS-A</text>
                         <text x="707" y="450" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">WAL + checkpoint + index</text>
 
                         <path d="M242 94 H296" stroke="#2F5F8F" stroke-width="2" marker-end="url(#route-arrow)"></path>
                         <path d="M447 142 V206" stroke="#2F5F8F" stroke-width="2" marker-end="url(#route-arrow)"></path>
                         <path d="M450 304 V364" stroke="#2F5F8F" stroke-width="2" marker-end="url(#route-arrow)"></path>
-                        <text x="487" y="342" font-family="Arial" font-size="12" fill="#2F5F8F">命中 bucket 23</text>
+                        <text x="487" y="342" font-family="Arial" font-size="12" fill="#2F5F8F">命中 pBucket 23</text>
 
                         <path d="M221 304 C221 336, 195 342, 195 364" fill="none" stroke="#8A8A8A" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#route-arrow)"></path>
                         <path d="M679 304 C679 336, 707 342, 707 364" fill="none" stroke="#8A8A8A" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#route-arrow)"></path>
 
                         <rect x="622" y="46" width="240" height="96" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
                         <text x="742" y="76" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">两个可独立变化的映射</text>
-                        <text x="742" y="102" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">目录 split：改 layout range</text>
+                        <text x="742" y="102" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">目录 split：改 vBucket range</text>
                         <text x="742" y="124" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">故障切换：改 bucket owner</text>
                     </svg>
                 </div>
 
-                <p>这两层映射是理解 inode bucket 的关键：目录的可见命名空间由 dentry 组成，dentry 的 key 是 <code>&lt;parent_inode, name&gt;</code>，value 指向 child inode；而 dentry 存在哪个 inode bucket，不是由 DS 直接决定，而是先由该目录自己的 <code>DirectoryLayout</code> 计算 bucket_index，再映射到 inode bucket 和 owner DS。这样目录扩容只需要调整 layout 的 bucket range，DS 故障或 rebalance 只需要迁移 inode bucket owner，两件事不会互相绑死。</p>
+                <p>这两层映射是理解 inode bucket 的关键：目录的可见命名空间由 dentry 组成，dentry 的 key 是 <code>&lt;parent_inode, name&gt;</code>，value 指向 child inode；而 dentry 存在哪个 physical bucket，不是由 DS 直接决定，而是先由该目录自己的 <code>DirectoryLayout</code> 计算 virtual bucket index，再映射到 physical bucket 和 owner DS。这样目录扩容只需要调整 virtual bucket range 到 physical bucket 的映射，DS 故障或 rebalance 只需要迁移 physical bucket owner，两件事不会互相绑死。</p>
+
+                <p>KyteStore 默认给单个目录配置 <strong>4K 个 virtual buckets</strong>。这不是说一开始就要物化 4096 个独立 DS owner，而是给目录命名空间预留足够细的 hash 切分粒度。以单目录 10 亿文件为例，平均每个 virtual bucket 承担约 <code>1,000,000,000 / 4096 = 244,141</code> 条 dentry，这对单个 physical bucket 背后的本地 RocksDB/LocalMetaKV 索引是可以接受的量级；如果业务要支持更大的超级目录，可以在系统启动时把 bucket 数配置得更大。</p>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table">
+                        <thead>
+                            <tr>
+                                <th>目录规模</th>
+                                <th>Virtual Bucket 数</th>
+                                <th>平均每 Bucket dentry</th>
+                                <th>设计取舍</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1 亿文件</td>
+                                <td>4,096</td>
+                                <td>约 24,414</td>
+                                <td>常规大目录，单 bucket 压力较低。</td>
+                            </tr>
+                            <tr>
+                                <td>10 亿文件</td>
+                                <td>4,096</td>
+                                <td>约 244,141</td>
+                                <td>默认配置下的目标级别，适合通过多 DS 分摊 owner。</td>
+                            </tr>
+                            <tr>
+                                <td>100 亿文件</td>
+                                <td>4,096</td>
+                                <td>约 2,441,406</td>
+                                <td>单 bucket 索引明显变重，应提高 bucket 数。</td>
+                            </tr>
+                            <tr>
+                                <td>100 亿文件</td>
+                                <td>65,536</td>
+                                <td>约 152,588</td>
+                                <td>更适合超大目录，但 layout 元数据和 fanout 管理成本更高。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="note"><strong>设计约束：</strong>为了简化路由、迁移和 crash recovery，系统启动后不支持直接修改 virtual bucket 数量。原因是 <code>hash(parent_inode, name) % virtual_bucket_count</code> 一旦变化，已有 dentry 会被路由到新位置；若要在线改变，必须迁移或重写整个目录的 dentry 映射。KyteStore 当前选择固定 bucket 数，通过调整 virtual bucket range 到 physical bucket 的映射来完成 split 和 rebalance。</div>
 
                 <div class="diagram-card">
                     <div class="diagram-title">Metadata Hot Path</div>
@@ -678,6 +778,64 @@
                 <p>KyteStore 的 metadata mutation 遵循一个简单但很关键的顺序：先校验本地 index，构造 WAL record，把 WAL 追加到 durable log；只有 WAL durable 之后，才把变更 apply 到本地 materialized index 并返回成功。如果 DS 在 WAL durable 后、index apply 前崩溃，恢复流程会加载 checkpoint 并重放 WAL，把 index 收敛回来。</p>
                 <p>这里的 WAL 没有依赖外部 Redis 或 FDB，而是依托 KyteStore 自己的对象写入路径：metadata WAL segment 作为内部隐藏对象写到 WRITE_BUFFER namespace，底层通过 ChunkSubSystem 的 <code>AppendChunkReplicated</code> 进入 ChunkServer 多副本路径。当前性能测试使用 3 副本配置，因此每条已提交的 metadata mutation 都落在本地多副本 WAL 上，再由 checkpoint 周期性压缩恢复成本。</p>
                 <p>如果每个 create 都单独产生一个对象写，延迟会被小 I/O 放大。KyteStore 因此引入 DS-level WAL 和 group commit：多个逻辑 metadata records 会被聚合为一个物理 WAL block，写入同一个 active segment object；每个 record 仍保留自己的 <code>inode_bucket_id</code>、bucket-local LSN 和 owner epoch。这样既保留 per-bucket 顺序和恢复边界，也能把一次 WAL I/O 的成本摊到一批请求上。</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Metadata WAL, 3 Replicas, Local Index</div>
+                    <svg viewBox="0 0 900 470" role="img" aria-label="Metadata WAL、三副本 Chunk 和本地 RocksDB Metadata 的关系">
+                        <defs>
+                            <marker id="wal-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+
+                        <rect x="34" y="50" width="210" height="82" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="139" y="82" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Metadata Mutation</text>
+                        <text x="139" y="106" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">create / unlink / rename</text>
+
+                        <rect x="328" y="36" width="244" height="110" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="450" y="70" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Batch Metadata WAL</text>
+                        <text x="450" y="96" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">many logical records</text>
+                        <text x="450" y="118" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">one physical WAL block</text>
+
+                        <rect x="660" y="38" width="200" height="104" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="760" y="68" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Wait Quorum</text>
+                        <text x="760" y="92" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">3 replica writes</text>
+                        <text x="760" y="114" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">all durable -> success</text>
+
+                        <rect x="122" y="236" width="176" height="82" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="210" y="268" text-anchor="middle" font-family="Arial" font-size="14" fill="#1E4A6E">Chunk Replica A</text>
+                        <text x="210" y="292" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">WAL segment append</text>
+
+                        <rect x="362" y="236" width="176" height="82" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="450" y="268" text-anchor="middle" font-family="Arial" font-size="14" fill="#1E4A6E">Chunk Replica B</text>
+                        <text x="450" y="292" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">WAL segment append</text>
+
+                        <rect x="602" y="236" width="176" height="82" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="690" y="268" text-anchor="middle" font-family="Arial" font-size="14" fill="#1E4A6E">Chunk Replica C</text>
+                        <text x="690" y="292" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">WAL segment append</text>
+
+                        <rect x="328" y="376" width="244" height="72" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="450" y="406" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Local RocksDB Metadata</text>
+                        <text x="450" y="430" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">materialized dentry / inode index</text>
+
+                        <path d="M244 91 H318" stroke="#2F5F8F" stroke-width="2" marker-end="url(#wal-arrow)"></path>
+                        <text x="281" y="78" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">group commit</text>
+
+                        <path d="M572 91 H650" stroke="#2F5F8F" stroke-width="2" marker-end="url(#wal-arrow)"></path>
+                        <text x="610" y="78" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">replicated append</text>
+
+                        <path d="M700 142 C650 186, 260 178, 210 226" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#wal-arrow)"></path>
+                        <path d="M760 142 C730 186, 480 188, 450 226" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#wal-arrow)"></path>
+                        <path d="M820 142 C850 188, 722 190, 690 226" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#wal-arrow)"></path>
+
+                        <path d="M450 318 V366" stroke="#2F5F8F" stroke-width="2" marker-end="url(#wal-arrow)"></path>
+                        <text x="488" y="350" font-family="Arial" font-size="12" fill="#2F5F8F">WAL durable 后 apply index</text>
+
+                        <path d="M330 410 C210 396, 180 344, 204 318" fill="none" stroke="#8A8A8A" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#wal-arrow)"></path>
+                        <text x="204" y="380" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">crash recovery: replay WAL</text>
+                    </svg>
+                </div>
+
                 <div class="note"><strong>一个重要细节：</strong>group commit 不靠固定等待凑批。worker 会自然 drain 已经排队的请求；当上一轮 WAL I/O 正在进行时，新请求继续排队，下一轮一起提交。这样可以降低均摊延迟，同时避免为了追求 batch size 人为增加前台等待。</div>
 
                 <h2>跨 bucket rename 的 transaction 模型</h2>
@@ -730,12 +888,9 @@
 
                 <p>这个设计的关键是把复杂度限制在 rename slow path 里。create、unlink、mkdir、lookup、readdir 不访问 MS lock，不因为跨 bucket rename 的存在而退化；same-bucket rename 继续使用单 WAL 快路径。MS lock 只做 fencing，不承载业务 metadata 内容。</p>
 
-                <h2>API 语义边界</h2>
-                <p>当前 FS metadata RPC 覆盖 <code>Mkdir</code>、<code>CreateFile</code>、<code>Lookup</code>、<code>GetAttr</code>、<code>Readdir</code>、<code>Unlink</code>、<code>Rmdir</code> 和 <code>Rename</code>。mutation 请求带 <code>client_op_id</code>，用于 WAL replay 和客户端重试时的幂等判断。内部请求可以携带 resolved dentry bucket，避免重复 path/hash 路由。</p>
-                <p>第一阶段不会把所有 POSIX 细节一次性做满。目标存在时的 replace、非空目录 rename 后的 path cache invalidation、跨 DS recovery 工具化都会分阶段完善。但核心方向不会退回到中心化 file metadata，也不会用 copy/delete 去伪装 POSIX rename。</p>
-
                 <h2>性能测试</h2>
-                <p>下面是最新 FS metadata operation perf 数据。测试为单个 DS 节点、32 访问线程；理论上多 DS 节点可以按 inode bucket 横向扩展，达到数百万 QPS。这里的 <code>avg_us/op</code> 是按总吞吐折算的均摊延迟，<code>WAL p50_us</code> 和 <code>WAL p99_us</code> 是 batch WAL flush 维度，因此二者不是同一粒度。</p>
+                <p>下面是最新 FS metadata operation perf 数据。测试场景使用 bthread 协程向单个 DataServer 发起约 2000 到 4000 个并发请求，持续执行 metadata mutation。这里的 <code>avg_us/op</code> 是按总吞吐折算的均摊延迟，<code>Batch WAL P50/P99</code> 是 WAL batch flush 的完成延迟，二者不是同一粒度。</p>
+                <p>多 DS 场景下，metadata QPS 可以按 inode bucket owner 横向扩展。不同 DS 之间没有共享的 metadata 写入瓶颈，也不需要在普通 create/unlink/mkdir 路径上互相协调，因此做到数百万级 metadata QPS 相对直接。WAL 延迟看起来在毫秒级，主要来源于三副本 Chunk 写入：一次 batch WAL 必须等待全部 replica append 成功后才能返回；但 group commit 会把这次成本摊到大量前台 metadata 操作上。</p>
 
                 <div class="table-wrap">
                     <table class="benchmark-table">
@@ -744,8 +899,8 @@
                                 <th>OP</th>
                                 <th>QPS</th>
                                 <th>avg_us/op</th>
-                                <th>WAL p50_us</th>
-                                <th>WAL p99_us</th>
+                                <th>Batch WAL P50</th>
+                                <th>Batch WAL P99</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -777,18 +932,11 @@
                                 <td>5,299</td>
                                 <td>13,327</td>
                             </tr>
-                            <tr>
-                                <td>rmdir</td>
-                                <td>N/A</td>
-                                <td>N/A</td>
-                                <td>N/A</td>
-                                <td>N/A</td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <p>从数据看，WAL 的单次 batch flush 仍然在毫秒级，但因为 group commit 的 batch size 足够大，前台操作可以获得微秒级均摊成本。这也是 KyteStore 没有把“可靠写”和“高吞吐”做成二选一的原因：可靠性靠 3 副本 WAL，吞吐靠 batch 与 shard/stream 并行。</p>
+                <p>从数据看，WAL 的单次 batch flush 仍然在毫秒级，但因为 group commit 的 batch size 足够大，前台操作可以获得微秒级均摊成本。这也是 KyteStore 没有把“可靠写”和“高吞吐”做成二选一的原因：可靠性靠三副本 WAL，吞吐靠 batch、bthread 并发和 bucket/DS 维度的并行。</p>
                 <p class="post-footnote">本文聚焦元数据方案选型。数据读写路径、extent map 与对象后端联动会在后续文章单独展开。</p>
             </article>
 
@@ -802,19 +950,63 @@
                 <div class="toc-box">
                     <strong>Outline</strong>
                     <ol>
-                        <li>What filesystem metadata is responsible for</li>
+                        <li>Filesystem metadata and POSIX operation semantics</li>
                         <li>Why cross-shard operations are hard</li>
-                        <li>Main design choices in the industry</li>
-                        <li>KyteStore inode bucket architecture</li>
+                        <li>Main design choices and KyteStore's decision</li>
+                        <li>KyteStore inode bucket architecture and 4K bucket sizing</li>
                         <li>3-replica WAL and batch group commit</li>
                         <li>Cross-bucket rename transaction model</li>
-                        <li>Performance results</li>
+                        <li>Performance and horizontal scaling</li>
                     </ol>
                 </div>
 
                 <h2>What Filesystem Metadata Does</h2>
                 <p>Filesystem metadata is more than filenames. A normal <code>open("/a/b/c")</code> walks path components, resolves dentry to inode, loads inode attributes, and eventually uses extent maps to find data. Directory listing needs a stable view. <code>mkdir</code>, <code>unlink</code>, and <code>rename</code> must update visibility, inode lifecycle, and recovery state.</p>
                 <p>In AI and lakehouse workloads, files may be large, but they may also be extremely numerous. Large files stress the data path. Small files, checkpoint publish patterns, and repeated directory scans often hit the metadata path first. KyteStore therefore treats lookup, create, and rename as first-class performance paths instead of delegating them to a central database by default.</p>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table">
+                        <thead>
+                            <tr>
+                                <th>POSIX Metadata Op</th>
+                                <th>Core Semantics</th>
+                                <th>Common Implementation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>lookup / open</td>
+                                <td>Walk path components and resolve parent/name dentries to inodes.</td>
+                                <td>Directory hash table, B+Tree / LSM index, or centralized KV mapping.</td>
+                            </tr>
+                            <tr>
+                                <td>getattr / stat</td>
+                                <td>Read inode type, permissions, size, mtime, link count, and related attributes.</td>
+                                <td>Inode table, local metadata shard, metadata service, or materialized local view.</td>
+                            </tr>
+                            <tr>
+                                <td>readdir / list</td>
+                                <td>List dentries under a directory with cursor or pagination semantics.</td>
+                                <td>Single-shard scan for small directories, fanout plus merge for large directories.</td>
+                            </tr>
+                            <tr>
+                                <td>create / mkdir</td>
+                                <td>Create a new dentry under the parent and allocate a child inode.</td>
+                                <td>Single-shard transaction, WAL-first mutation, or dentry shard plus inode range allocator.</td>
+                            </tr>
+                            <tr>
+                                <td>unlink / rmdir</td>
+                                <td>Remove a dentry and update inode lifecycle; rmdir also validates directory emptiness.</td>
+                                <td>Dentry tombstone, link count, background GC, usually protected by WAL.</td>
+                            </tr>
+                            <tr>
+                                <td>rename</td>
+                                <td>Atomically switch old dentry to new dentry while preserving inode identity.</td>
+                                <td>Single WAL record in one shard; lock/intent plus transaction WAL across shards.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
                 <h2>The Hard Part: Cross-Shard Operations</h2>
                 <p>With one metadata node, rename correctness is straightforward, but the model does not scale. KyteStore routes dentries by <code>parent inode + name</code> into dentry buckets, allowing large directories to spread across inode buckets. Lookup and create can scale out, but rename becomes harder.</p>
@@ -834,17 +1026,64 @@
                         <strong>Reduced Semantics</strong>
                         <span>Reject cross-directory rename, target replace, or complex directory mutation. This ships quickly, but exposes storage implementation boundaries to users and frameworks.</span>
                     </div>
+                    <div class="callout featured">
+                        <strong>KyteStore Choice</strong>
+                        <span>Keep the control plane small: owner, epoch, ranges, and fencing. Move hot metadata to DS inode buckets, use local indexes for throughput, and replicated WAL for recovery.</span>
+                    </div>
                 </div>
-                <p>KyteStore does not put full file metadata in MetaServer/FDB. MS/FDB tracks FS bindings, inode bucket owners, owner epochs, inode range allocation, and lightweight transaction locks. Hot dentry, inode attribute, and extent state belongs to the DS FSSubsystem owner.</p>
+                <p>KyteStore does not put full file metadata in MetaServer/FDB. MS/FDB tracks FS bindings, inode bucket owners, owner epochs, inode range allocation, and lightweight transaction locks. Hot dentry, inode attribute, and extent state belongs to the DS FSSubsystem owner. In other words, KyteStore combines a small centralized control plane with a decentralized metadata data plane.</p>
 
                 <h2>KyteStore Inode Buckets</h2>
                 <p>The recovery and scaling unit is the inode bucket. Each bucket has its own owner epoch, WAL, checkpoint, materialized index, and recovery boundary. FE/SDK or DS path RPC uses DirectoryLayout to map <code>parent inode + filename</code> to a dentry bucket and then sends the operation to the owner DS.</p>
                 <p>This keeps MS/FDB out of normal file I/O: lookup, getattr, readdir, create, unlink, and mkdir mainly hit the DS local materialized index. MS/FDB participates in owner transfer, range allocation, bucket materialization, and cross-DS transaction locking.</p>
+                <p>DirectoryLayout has two levels: a stable virtual bucket index produced by <code>hash(parent_inode, filename, seed) % virtual_bucket_count</code>, and a mapping from virtual bucket ranges to physical buckets. Physical buckets have owners, WALs, checkpoints, and local indexes. Directory split changes virtual-to-physical mapping; failover or rebalance changes physical bucket owners.</p>
+                <p>The default single-directory layout uses <strong>4K virtual buckets</strong>. For a directory with one billion files, the average load is about <code>1,000,000,000 / 4096 = 244,141</code> dentries per virtual bucket, which is a reasonable level for the local RocksDB/LocalMetaKV index behind a physical bucket. Larger directories can use a larger bucket count configured at system startup.</p>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table">
+                        <thead>
+                            <tr>
+                                <th>Directory Size</th>
+                                <th>Virtual Buckets</th>
+                                <th>Avg Dentries / Bucket</th>
+                                <th>Tradeoff</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>100M files</td>
+                                <td>4,096</td>
+                                <td>about 24,414</td>
+                                <td>Low pressure for common large directories.</td>
+                            </tr>
+                            <tr>
+                                <td>1B files</td>
+                                <td>4,096</td>
+                                <td>about 244,141</td>
+                                <td>Target scale for the default layout, spreadable across DS owners.</td>
+                            </tr>
+                            <tr>
+                                <td>10B files</td>
+                                <td>4,096</td>
+                                <td>about 2,441,406</td>
+                                <td>Heavy per-bucket index; increase bucket count for this scale.</td>
+                            </tr>
+                            <tr>
+                                <td>10B files</td>
+                                <td>65,536</td>
+                                <td>about 152,588</td>
+                                <td>Better for very large directories, at the cost of more layout and fanout management.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="note"><strong>Design constraint:</strong> to keep routing, migration, and crash recovery simple, KyteStore does not support changing the virtual bucket count after the system starts. Changing the modulo would route existing dentries to new locations unless all related dentries are migrated or rewritten.</div>
 
                 <h2>3-Replica WAL And Batch Group Commit</h2>
                 <p>KyteStore metadata mutations follow a strict order: validate against the local index, build a WAL record, append it to a durable log, and only then apply it to the materialized index. If a DS crashes after WAL durability but before index apply, recovery loads the latest checkpoint and replays the WAL.</p>
                 <p>The WAL is not stored in external Redis or FDB. It is written as hidden objects in a KyteStore WRITE_BUFFER namespace. Under the hood, ChunkSubSystem uses <code>AppendChunkReplicated</code> to write through ChunkServer's multi-replica path. The latest benchmark path uses 3 replicas, so committed metadata mutations are protected by a local replicated WAL before checkpoint compaction.</p>
                 <p>To avoid turning every create into a tiny object write, KyteStore uses a DS-level WAL with group commit. Multiple logical metadata records are packed into one physical WAL block in an active segment object. Each record still carries its own <code>inode_bucket_id</code>, bucket-local LSN, and owner epoch, preserving per-bucket ordering and recovery boundaries.</p>
+                <p>Conceptually, foreground metadata operations first enter a batch WAL block, then the block is appended to three Chunk replicas. Only after all replicas confirm the append does the DS apply the mutation to the local RocksDB metadata index. Recovery does the reverse: load checkpoint, replay durable WAL records, and rebuild the materialized index.</p>
                 <div class="note"><strong>Important detail:</strong> group commit does not wait artificially for a target batch size. A worker drains requests already queued; while one WAL I/O is running, new requests accumulate and are committed in the next batch. This keeps amortized latency low without adding unnecessary foreground delay.</div>
 
                 <h2>Cross-Bucket Rename Transactions</h2>
@@ -853,7 +1092,8 @@
                 <p>The key guardrail is that transaction complexity stays in the rename slow path. Create, unlink, mkdir, lookup, and readdir do not touch MS locks, and same-bucket rename continues to use the single-record WAL fast path.</p>
 
                 <h2>Performance Results</h2>
-                <p>The latest FS metadata operation data below uses one DS node and 32 access threads. Multi-node deployments can theoretically scale by inode bucket and reach millions of QPS. <code>avg_us/op</code> is an amortized value derived from throughput, while WAL p50/p99 are batch flush latencies, so they are measured at different granularities.</p>
+                <p>The latest FS metadata benchmark uses bthread coroutines to issue roughly 2,000 to 4,000 concurrent metadata requests to a single DataServer. <code>avg_us/op</code> is an amortized value derived from total throughput, while <code>Batch WAL P50/P99</code> measures WAL batch flush completion latency, so the two numbers are intentionally different granularities.</p>
+                <p>With multiple DS nodes, metadata QPS scales by inode bucket owner. Ordinary create/unlink/mkdir paths do not share a cross-DS write bottleneck, so reaching millions of metadata QPS is relatively straightforward. The high WAL latency mainly comes from the three-replica Chunk write: a batch WAL can return only after every replica append succeeds, while group commit amortizes that cost across many foreground operations.</p>
 
                 <div class="table-wrap">
                     <table class="benchmark-table">
@@ -862,8 +1102,8 @@
                                 <th>OP</th>
                                 <th>QPS</th>
                                 <th>avg_us/op</th>
-                                <th>WAL p50_us</th>
-                                <th>WAL p99_us</th>
+                                <th>Batch WAL P50</th>
+                                <th>Batch WAL P99</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -895,18 +1135,11 @@
                                 <td>5,299</td>
                                 <td>13,327</td>
                             </tr>
-                            <tr>
-                                <td>rmdir</td>
-                                <td>N/A</td>
-                                <td>N/A</td>
-                                <td>N/A</td>
-                                <td>N/A</td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <p>The data shows that individual WAL batch flushes are still in milliseconds, but group commit makes the foreground operation cost microsecond-level on average. This is the core tradeoff: reliability comes from the 3-replica WAL, while throughput comes from batching and shard/stream parallelism.</p>
+                <p>The data shows that individual WAL batch flushes are still in milliseconds, but group commit makes the foreground operation cost microsecond-level on average. This is the core tradeoff: reliability comes from the three-replica WAL, while throughput comes from batching, bthread concurrency, and bucket/DS-level parallelism.</p>
                 <p class="post-footnote">This article focuses on metadata design. The data path, extent maps, and remote object backend integration will be covered separately.</p>
             </article>
         </div>
