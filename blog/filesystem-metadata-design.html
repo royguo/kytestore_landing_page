@@ -500,6 +500,132 @@
                 <p>这个模型把 MS/FDB 从普通文件 I/O 热路径中移出去：lookup、getattr、readdir、create、unlink、mkdir 的主要路径是访问 DS 本地 materialized index；MS/FDB 只在 owner 变更、range 分配、bucket materialize 或跨 DS transaction lock 时参与。</p>
 
                 <div class="diagram-card">
+                    <div class="diagram-title">Directory, Dentry, Inode Mapping</div>
+                    <svg viewBox="0 0 900 470" role="img" aria-label="目录、dentry、inode 与 DirectoryLayout 的逻辑映射关系">
+                        <defs>
+                            <marker id="map-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+
+                        <rect x="28" y="36" width="210" height="108" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="133" y="66" text-anchor="middle" font-family="Arial" font-size="16" fill="#1E4A6E">目录本身也是 inode</text>
+                        <text x="133" y="94" text-anchor="middle" font-family="Arial" font-size="13" fill="#3C3C3C">/datasets</text>
+                        <text x="133" y="118" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">parent inode = 100</text>
+
+                        <rect x="28" y="218" width="210" height="128" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="133" y="248" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">DirectoryLayout(100)</text>
+                        <text x="133" y="274" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">layout_version = 7</text>
+                        <text x="133" y="296" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">hash_seed + bucket_size</text>
+                        <text x="133" y="318" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">bucket_index -> inode_bucket</text>
+
+                        <rect x="344" y="44" width="232" height="318" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="460" y="74" text-anchor="middle" font-family="Arial" font-size="16" fill="#1F1F1F">目录项 namespace</text>
+                        <text x="460" y="98" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">key = &lt;parent_inode, name&gt;</text>
+
+                        <rect x="368" y="126" width="184" height="54" rx="5" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="460" y="148" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">&lt;100, "train/"&gt;</text>
+                        <text x="460" y="168" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">dentry -> inode 301</text>
+
+                        <rect x="368" y="208" width="184" height="54" rx="5" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="460" y="230" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">&lt;100, "ckpt-42"&gt;</text>
+                        <text x="460" y="250" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">dentry -> inode 822</text>
+
+                        <rect x="368" y="290" width="184" height="54" rx="5" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="460" y="312" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">&lt;100, "_delta_log"&gt;</text>
+                        <text x="460" y="332" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">dentry -> inode 417</text>
+
+                        <rect x="670" y="66" width="190" height="84" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="765" y="96" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">inode 301</text>
+                        <text x="765" y="120" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">type = directory</text>
+
+                        <rect x="670" y="194" width="190" height="102" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="765" y="224" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">inode 822</text>
+                        <text x="765" y="248" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">type = file, attr</text>
+                        <text x="765" y="270" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">extent map -> chunks</text>
+
+                        <rect x="670" y="336" width="190" height="84" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="765" y="366" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">inode 417</text>
+                        <text x="765" y="390" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">type = file, attr</text>
+
+                        <path d="M133 144 V208" stroke="#2F5F8F" stroke-width="2" marker-end="url(#map-arrow)"></path>
+                        <text x="164" y="184" font-family="Arial" font-size="12" fill="#2F5F8F">目录持有 layout</text>
+
+                        <path d="M238 88 H334" stroke="#2F5F8F" stroke-width="2" marker-end="url(#map-arrow)"></path>
+                        <text x="286" y="74" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">parent inode</text>
+
+                        <path d="M238 282 C284 282, 300 152, 358 152" fill="none" stroke="#2F5F8F" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#map-arrow)"></path>
+                        <text x="294" y="258" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">name hash</text>
+
+                        <path d="M552 153 H660" stroke="#2F5F8F" stroke-width="2" marker-end="url(#map-arrow)"></path>
+                        <path d="M552 235 H660" stroke="#2F5F8F" stroke-width="2" marker-end="url(#map-arrow)"></path>
+                        <path d="M552 317 C612 317, 610 378, 660 378" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#map-arrow)"></path>
+                        <text x="610" y="132" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">dentry 指向 child inode</text>
+                    </svg>
+                </div>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">DirectoryLayout Bucket Routing</div>
+                    <svg viewBox="0 0 900 520" role="img" aria-label="DirectoryLayout 将文件名映射到 inode bucket owner 的路由过程">
+                        <defs>
+                            <marker id="route-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+
+                        <rect x="28" y="36" width="214" height="116" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="135" y="66" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">一次 lookup/create</text>
+                        <text x="135" y="94" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">parent inode = 100</text>
+                        <text x="135" y="116" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">name = "ckpt-42"</text>
+                        <text x="135" y="138" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">operation = create</text>
+
+                        <rect x="306" y="46" width="282" height="96" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="447" y="78" text-anchor="middle" font-family="Arial" font-size="14" fill="#1E4A6E">bucket_index</text>
+                        <text x="447" y="104" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">hash(parent_inode, name, seed)</text>
+                        <text x="447" y="124" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">% inode_bucket_size</text>
+
+                        <rect x="90" y="216" width="720" height="88" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="450" y="244" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">DirectoryLayout(100): bucket_index -> inode_bucket_id</text>
+                        <rect x="126" y="264" width="190" height="24" rx="3" fill="#DDECF7" stroke="#2F5F8F"></rect>
+                        <rect x="316" y="264" width="268" height="24" rx="3" fill="#EAF3EA" stroke="#4B7F52"></rect>
+                        <rect x="584" y="264" width="190" height="24" rx="3" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="221" y="281" text-anchor="middle" font-family="Arial" font-size="12" fill="#1E4A6E">index 0-3 -> bucket 17</text>
+                        <text x="450" y="281" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5D35">index 4-9 -> bucket 23</text>
+                        <text x="679" y="281" text-anchor="middle" font-family="Arial" font-size="12" fill="#6F4B20">index 10-15 -> bucket 31</text>
+
+                        <rect x="88" y="374" width="214" height="104" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="195" y="404" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">InodeBucket 17</text>
+                        <text x="195" y="428" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">owner DS-A</text>
+                        <text x="195" y="450" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">WAL + checkpoint + index</text>
+
+                        <rect x="344" y="374" width="214" height="104" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="451" y="404" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">InodeBucket 23</text>
+                        <text x="451" y="428" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">owner DS-B</text>
+                        <text x="451" y="450" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">写 dentry，分配 child inode</text>
+
+                        <rect x="600" y="374" width="214" height="104" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="707" y="404" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">InodeBucket 31</text>
+                        <text x="707" y="428" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">owner DS-A</text>
+                        <text x="707" y="450" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">WAL + checkpoint + index</text>
+
+                        <path d="M242 94 H296" stroke="#2F5F8F" stroke-width="2" marker-end="url(#route-arrow)"></path>
+                        <path d="M447 142 V206" stroke="#2F5F8F" stroke-width="2" marker-end="url(#route-arrow)"></path>
+                        <path d="M450 304 V364" stroke="#2F5F8F" stroke-width="2" marker-end="url(#route-arrow)"></path>
+                        <text x="487" y="342" font-family="Arial" font-size="12" fill="#2F5F8F">命中 bucket 23</text>
+
+                        <path d="M221 304 C221 336, 195 342, 195 364" fill="none" stroke="#8A8A8A" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#route-arrow)"></path>
+                        <path d="M679 304 C679 336, 707 342, 707 364" fill="none" stroke="#8A8A8A" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#route-arrow)"></path>
+
+                        <rect x="622" y="46" width="240" height="96" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="742" y="76" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">两个可独立变化的映射</text>
+                        <text x="742" y="102" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">目录 split：改 layout range</text>
+                        <text x="742" y="124" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">故障切换：改 bucket owner</text>
+                    </svg>
+                </div>
+
+                <p>这两层映射是理解 inode bucket 的关键：目录的可见命名空间由 dentry 组成，dentry 的 key 是 <code>&lt;parent_inode, name&gt;</code>，value 指向 child inode；而 dentry 存在哪个 inode bucket，不是由 DS 直接决定，而是先由该目录自己的 <code>DirectoryLayout</code> 计算 bucket_index，再映射到 inode bucket 和 owner DS。这样目录扩容只需要调整 layout 的 bucket range，DS 故障或 rebalance 只需要迁移 inode bucket owner，两件事不会互相绑死。</p>
+
+                <div class="diagram-card">
                     <div class="diagram-title">Metadata Hot Path</div>
                     <svg viewBox="0 0 900 420" role="img" aria-label="KyteStore 文件系统元数据热路径架构图">
                         <defs>
