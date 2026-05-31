@@ -272,7 +272,7 @@
             margin-top: 0;
         }
 
-        #features .table-scroll {
+        .architecture-comparison .table-scroll {
             overflow-x: visible;
         }
 
@@ -297,6 +297,14 @@
         .architecture-section p {
             color: var(--text-secondary);
             max-width: 700px;
+            margin-bottom: 20px;
+        }
+
+        .architecture-comparison {
+            margin-top: 72px;
+        }
+
+        .architecture-comparison .section-title {
             margin-bottom: 20px;
         }
 
@@ -793,54 +801,54 @@
                 font-size: 10px;
             }
 
-            #features .comparison-table,
-            #features .comparison-table tbody,
-            #features .comparison-table tr,
-            #features .comparison-table td {
+            .architecture-comparison .comparison-table,
+            .architecture-comparison .comparison-table tbody,
+            .architecture-comparison .comparison-table tr,
+            .architecture-comparison .comparison-table td {
                 display: block;
             }
 
-            #features .comparison-table {
+            .architecture-comparison .comparison-table {
                 border: none;
                 background: transparent;
             }
 
-            #features .comparison-table thead {
+            .architecture-comparison .comparison-table thead {
                 display: none;
             }
 
-            #features .comparison-table tbody {
+            .architecture-comparison .comparison-table tbody {
                 display: grid;
                 gap: 14px;
             }
 
-            #features .comparison-table tr {
+            .architecture-comparison .comparison-table tr {
                 display: grid;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
                 background: var(--bg-primary);
                 border: 1px solid var(--border);
             }
 
-            #features .comparison-table td {
+            .architecture-comparison .comparison-table td {
                 min-height: 62px;
                 border-right: 1px solid var(--border);
                 border-bottom: 1px solid var(--border);
             }
 
-            #features .comparison-table td:nth-child(2) {
+            .architecture-comparison .comparison-table td:nth-child(2) {
                 border-left: none;
                 border-right: 1px solid var(--border);
             }
 
-            #features .comparison-table td:nth-child(2n + 1) {
+            .architecture-comparison .comparison-table td:nth-child(2n + 1) {
                 border-right: none;
             }
 
-            #features .comparison-table tbody tr:last-child td {
+            .architecture-comparison .comparison-table tbody tr:last-child td {
                 border-bottom: 1px solid var(--border);
             }
 
-            #features .comparison-table .feature-name {
+            .architecture-comparison .comparison-table .feature-name {
                 grid-column: 1 / -1;
                 min-height: 0;
                 background: var(--bg-secondary);
@@ -848,7 +856,7 @@
                 color: var(--text-primary);
             }
 
-            #features .comparison-table td:not(.feature-name)::before {
+            .architecture-comparison .comparison-table td:not(.feature-name)::before {
                 display: block;
                 margin-bottom: 4px;
                 color: var(--text-muted);
@@ -858,28 +866,28 @@
                 text-transform: uppercase;
             }
 
-            #features .comparison-table td:nth-child(2)::before {
+            .architecture-comparison .comparison-table td:nth-child(2)::before {
                 content: "KyteStore";
                 color: var(--accent);
             }
 
-            #features .comparison-table td:nth-child(3)::before {
+            .architecture-comparison .comparison-table td:nth-child(3)::before {
                 content: "Alluxio";
             }
 
-            #features .comparison-table td:nth-child(4)::before {
+            .architecture-comparison .comparison-table td:nth-child(4)::before {
                 content: "JuiceFS";
             }
 
-            #features .comparison-table td:nth-child(5)::before {
+            .architecture-comparison .comparison-table td:nth-child(5)::before {
                 content: "Ceph";
             }
 
-            #features .comparison-table td:nth-child(6)::before {
+            .architecture-comparison .comparison-table td:nth-child(6)::before {
                 content: "MinIO";
             }
 
-            #features .comparison-table td:nth-child(7)::before {
+            .architecture-comparison .comparison-table td:nth-child(7)::before {
                 content: "SeaweedFS";
             }
 
@@ -963,7 +971,6 @@
                     <button class="nav-close" type="button" aria-label="关闭导航" onclick="closeNav()">&times;</button>
                     <a href="index.html" data-i18n="nav-home">首页</a>
                     <a href="#architecture" data-i18n="nav-architecture">架构</a>
-                    <a href="#features" data-i18n="nav-features">功能</a>
                     <a href="#performance" data-i18n="nav-performance">性能</a>
                     <a href="#deployment" data-i18n="nav-deployment">配置</a>
                     <a href="blog.html" data-i18n="nav-blog">博客</a>
@@ -984,7 +991,7 @@
 
     <section id="architecture" class="architecture-section">
         <div class="container">
-            <div class="section-title" data-i18n="arch-label">系统架构</div>
+            <div class="section-title" data-i18n="arch-label">架构</div>
             <h2 data-i18n="arch-h2">统一 ChunkServer 底座，支撑对象与文件访问</h2>
             <ul class="arch-bullets">
                 <li data-i18n="arch-bullet-1">基于 ChunkServer 的统一架构，实现性能和扩展性的平衡。</li>
@@ -994,16 +1001,13 @@
             </ul>
 
             <img class="arch-diagram" src="assets/images/architecture.jpg" width="1536" height="1024" alt="KyteStore architecture: clients enter through S3, POSIX, or future HDFS gateways, then use DataServer, S3 Subsystem, FS Subsystem, Chunk Server, MetaServer, FoundationDB, local SSD, and S3/COS/OSS" loading="lazy" decoding="async">
-        </div>
-    </section>
 
-    <section id="features" class="section">
-        <div class="container">
-            <div class="section-title" data-i18n="features-label">功能对比</div>
-            <h2 data-i18n="features-h2">KyteStore 与主流存储系统对比</h2>
+            <div class="architecture-comparison">
+                <div class="section-title" data-i18n="features-label">功能对比</div>
+                <h2 data-i18n="features-h2">KyteStore 与主流存储系统对比</h2>
 
-            <div class="table-scroll">
-                <table class="comparison-table">
+                <div class="table-scroll">
+                    <table class="comparison-table">
                     <thead>
                         <tr>
                             <th data-i18n="cmp-th-feature">Feature</th>
@@ -1098,7 +1102,8 @@
                             <td data-i18n="cmp-fit-seaweed">轻量多协议</td>
                         </tr>
                     </tbody>
-                </table>
+                    </table>
+                </div>
             </div>
         </div>
     </section>
@@ -1442,7 +1447,6 @@
             en: {
                 'nav-home': 'HOME',
                 'nav-architecture': 'DESIGN',
-                'nav-features': 'FEATURES',
                 'nav-performance': 'BENCHMARK',
                 'nav-deployment': null,
                 'nav-docs': 'DOCS',
@@ -1507,7 +1511,7 @@
                 'cmp-fit-ceph': 'Unified storage cluster',
                 'cmp-fit-minio': 'Self-hosted S3',
                 'cmp-fit-seaweed': 'Light multi-protocol',
-                'arch-label': 'System Architecture',
+                'arch-label': 'Architecture',
                 'arch-h2': 'A Unified ChunkServer Foundation for Object and File Access',
                 'arch-p': 'KyteStore builds S3 Subsystem and FS Subsystem on top of a unified ChunkServer foundation. Users can access data through S3-compatible object protocols or POSIX/FUSE file semantics; file access can still use S3/COS/OSS as the remote data layer.',
                 'arch-bullet-1': 'A unified ChunkServer architecture balances performance and scalability.',
@@ -1635,7 +1639,6 @@
             zh: {
                 'nav-home': '首页',
                 'nav-architecture': '架构',
-                'nav-features': '功能',
                 'nav-performance': '性能',
                 'nav-deployment': '配置',
                 'nav-docs': '文档',
@@ -1700,7 +1703,7 @@
                 'cmp-fit-ceph': '自建统一存储',
                 'cmp-fit-minio': '自建 S3',
                 'cmp-fit-seaweed': '轻量多协议',
-                'arch-label': '系统架构',
+                'arch-label': '架构',
                 'arch-h2': '统一 ChunkServer 底座，支撑对象与文件访问',
                 'arch-p': 'KyteStore 以 ChunkServer 为统一数据底座，在其上构建 S3 Subsystem 和 FS Subsystem。用户既可以通过 S3 兼容对象协议访问，也可以通过 POSIX/FUSE 文件语义访问；使用文件协议时，底层仍可把 S3/COS/OSS 作为远程数据层。',
                 'arch-bullet-1': '基于 ChunkServer 的统一架构，实现性能和扩展性的平衡。',
