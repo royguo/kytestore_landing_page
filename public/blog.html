@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KyteStore 博客</title>
-    <meta name="description" content="KyteStore 技术博客，记录 Filesystem 元数据、ChunkServer、S3 与 POSIX 加速相关的架构思考。">
-    <meta name="keywords" content="KyteStore 博客, Filesystem 元数据, FS metadata, POSIX 文件系统, inode bucket, metadata WAL, group commit, ChunkServer, AI 训练存储, 湖仓系统">
+    <meta name="description" content="KyteStore 技术博客，记录 Filesystem 元数据、混沌测试、ChunkServer、S3 与 POSIX 加速相关的架构思考。">
+    <meta name="keywords" content="KyteStore 博客, 混沌测试, Chaos Engineering, Filesystem 元数据, FS metadata, POSIX 文件系统, inode bucket, metadata WAL, group commit, ChunkServer, AI 训练存储, 湖仓系统">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://kytestore.com/blog">
     <meta property="og:locale" content="zh_CN">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="KyteStore">
     <meta property="og:title" content="KyteStore 博客">
-    <meta property="og:description" content="记录 KyteStore 在 Filesystem 元数据、湖仓系统、AI 训推、S3 与 POSIX 加速方向的架构思考。">
+    <meta property="og:description" content="记录 KyteStore 在混沌测试、Filesystem 元数据、湖仓系统、AI 训推、S3 与 POSIX 加速方向的架构思考。">
     <meta property="og:url" content="https://kytestore.com/blog">
     <meta property="og:image" content="https://kytestore.com/assets/images/ecosystem.jpg">
     <meta name="twitter:card" content="summary_large_image">
@@ -381,6 +381,16 @@
 
         <section class="blog-list" aria-label="博客列表">
             <div class="container">
+                <a class="blog-row" href="blog/chaos-testing-best-practices.html">
+                    <div class="blog-meta">
+                        <span data-i18n="post2-category">可靠性工程</span>
+                        <time datetime="2026-06-01">2026-06-01</time>
+                    </div>
+                    <div>
+                        <h2 data-i18n="post2-title">KyteStore 的混沌测试最佳实践</h2>
+                        <p data-i18n="post2-summary">从混沌测试的定位、与 UT 和集成测试的区别，到 KyteStore 基于对象账本、故障注入和恢复门禁的本地混沌测试实践。</p>
+                    </div>
+                </a>
                 <a class="blog-row" href="blog/filesystem-metadata-design.html">
                     <div class="blog-meta">
                         <span data-i18n="post1-category">文件系统</span>
@@ -412,6 +422,9 @@
                 'lang-toggle': '中',
                 'blog-title': 'Technical Blog',
                 'blog-intro': 'Technical notes and architecture thinking from the KyteStore team are updated here regularly.',
+                'post2-category': 'Reliability Engineering',
+                'post2-title': 'KyteStore Chaos Testing Best Practices',
+                'post2-summary': 'How KyteStore uses chaos testing, model-based object ledgers, fault injection, and recovery gates to validate storage correctness.',
                 'post1-category': 'Filesystem',
                 'post1-title': 'KyteStore Filesystem Metadata Design Choices',
                 'post1-summary': 'A technical look at filesystem metadata, cross-shard rename, mainstream design options, and KyteStore inode buckets, 3-replica WAL, and group commit.',
@@ -428,6 +441,9 @@
                 'lang-toggle': 'EN',
                 'blog-title': '技术博客',
                 'blog-intro': 'KyteStore 团队的一些技术思考都会定期更新在这里。',
+                'post2-category': '可靠性工程',
+                'post2-title': 'KyteStore 的混沌测试最佳实践',
+                'post2-summary': '从混沌测试的定位、与 UT 和集成测试的区别，到 KyteStore 基于对象账本、故障注入和恢复门禁的本地混沌测试实践。',
                 'post1-category': '文件系统',
                 'post1-title': 'KyteStore 的 Filesystem 元数据方案选型',
                 'post1-summary': '从文件系统元数据的用途、跨分片 rename 难点、主流选型，到 KyteStore inode bucket、3 副本 WAL 与 group commit 的设计取舍。',

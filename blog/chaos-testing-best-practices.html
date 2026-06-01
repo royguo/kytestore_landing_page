@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KyteStore 的混沌测试最佳实践 - KyteStore 博客</title>
+    <meta name="description" content="基于 KyteStore 本地混沌测试实现，介绍混沌测试的定位、与 UT 和集成测试的区别、对象账本校验、故障注入、恢复门禁与当前覆盖不足。">
+    <meta name="keywords" content="KyteStore, 混沌测试, Chaos Engineering, chaos testing, object storage, S3, 分布式存储, 故障注入, 数据一致性, SQLite ledger, ChunkServer, DataServer">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://kytestore.com/blog/chaos-testing-best-practices">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="KyteStore">
+    <meta property="og:title" content="KyteStore 的混沌测试最佳实践">
+    <meta property="og:description" content="KyteStore 如何用模型化对象账本、故障注入、恢复门禁与不变量采样验证分布式存储的数据安全。">
+    <meta property="og:url" content="https://kytestore.com/blog/chaos-testing-best-practices">
+    <meta property="og:image" content="https://kytestore.com/assets/images/architecture.jpg">
+    <meta property="article:published_time" content="2026-06-01">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg">
+    <style>
+        :root {
+            --bg-primary: #FDFCF9;
+            --bg-secondary: #F7F7F5;
+            --bg-tertiary: #F0EFEB;
+            --text-primary: #1F1F1F;
+            --text-secondary: #3C3C3C;
+            --text-muted: #6B6B6B;
+            --accent: #2F5F8F;
+            --accent-dim: #1E4A6E;
+            --warm: #9A6B2F;
+            --border: #E4E4E2;
+            --border-strong: #C4C0B8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-size: 17px;
+            line-height: 1.78;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            border-bottom: 3px double var(--border-strong);
+            padding: 20px 0;
+            background: rgba(253, 252, 249, 0.96);
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            color: var(--text-primary);
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        nav a {
+            margin-left: 28px;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            letter-spacing: 0.12em;
+            text-decoration: none;
+            text-transform: uppercase;
+        }
+
+        nav a:hover,
+        nav a.active {
+            color: var(--accent);
+        }
+
+        #lang-toggle {
+            background: none;
+            border: 1px solid var(--border-strong);
+            color: var(--text-muted);
+            cursor: pointer;
+            margin-left: 28px;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 4px 10px;
+            transition: color 0.2s, border-color 0.2s;
+            vertical-align: middle;
+        }
+
+        #lang-toggle:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .nav-toggle,
+        .nav-close {
+            display: none;
+            appearance: none;
+            background: none;
+            border: 1px solid var(--border-strong);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .nav-toggle {
+            width: 40px;
+            height: 36px;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .nav-toggle span {
+            display: block;
+            width: 18px;
+            height: 2px;
+            background: currentColor;
+        }
+
+        .nav-close {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            width: 36px;
+            height: 36px;
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .nav-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 29;
+            background: rgba(31, 31, 31, 0.28);
+        }
+
+        body.nav-open {
+            overflow: hidden;
+        }
+
+        .article-shell {
+            padding: 72px 0 96px;
+        }
+
+        .article {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            min-width: 0;
+        }
+
+        .breadcrumb {
+            display: inline-block;
+            margin-bottom: 28px;
+            color: var(--accent);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            letter-spacing: 0.1em;
+            text-decoration: none;
+            text-transform: uppercase;
+        }
+
+        .meta {
+            margin-bottom: 16px;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin-bottom: 24px;
+            color: var(--text-primary);
+            font-size: 44px;
+            font-weight: normal;
+            line-height: 1.18;
+            overflow-wrap: anywhere;
+        }
+
+        .generated-note {
+            margin: -10px 0 26px;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .lead {
+            margin-bottom: 36px;
+            color: var(--text-secondary);
+            font-size: 20px;
+            overflow-wrap: anywhere;
+        }
+
+        h2 {
+            margin: 46px 0 14px;
+            color: var(--text-primary);
+            font-size: 28px;
+            font-weight: normal;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+        }
+
+        h3 {
+            margin: 28px 0 10px;
+            color: var(--accent-dim);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 15px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        p {
+            margin-bottom: 18px;
+            color: var(--text-secondary);
+            overflow-wrap: anywhere;
+        }
+
+        ul {
+            margin: 0 0 22px 1.3em;
+            color: var(--text-secondary);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+            font-size: 0.92em;
+        }
+
+        .toc-box,
+        .note {
+            margin: 30px 0;
+            padding: 20px 22px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        .toc-box strong,
+        .note strong {
+            color: var(--text-primary);
+        }
+
+        .toc-box ol {
+            margin: 12px 0 0 1.25em;
+            color: var(--text-secondary);
+        }
+
+        .diagram-card {
+            margin: 34px 0;
+            padding: 18px;
+            border: 1px solid var(--border);
+            background: #FFFFFF;
+        }
+
+        .diagram-card svg {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .diagram-title {
+            margin-bottom: 14px;
+            color: var(--accent-dim);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .table-wrap {
+            width: 100%;
+            margin: 28px 0;
+            overflow-x: auto;
+        }
+
+        .benchmark-table {
+            width: 100%;
+            min-width: 720px;
+            border-collapse: collapse;
+            border: 1px solid var(--border);
+            background: #FFFFFF;
+        }
+
+        .benchmark-table th,
+        .benchmark-table td {
+            padding: 12px 14px;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .benchmark-table th {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .benchmark-table td {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        .benchmark-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .benchmark-table th:last-child,
+        .benchmark-table td:last-child {
+            border-right: none;
+        }
+
+        .fit-table {
+            min-width: 0;
+        }
+
+        .fit-table th:first-child,
+        .fit-table td:first-child {
+            min-width: 128px;
+            white-space: nowrap;
+        }
+
+        .reference-list a {
+            color: var(--accent-dim);
+            text-decoration: none;
+        }
+
+        .reference-list a:hover {
+            text-decoration: underline;
+        }
+
+        .post-footnote {
+            margin-top: 42px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        footer {
+            border-top: 3px double var(--border-strong);
+            padding: 36px 0;
+            text-align: center;
+            color: var(--text-muted);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                max-width: 100vw;
+                padding: 0 20px;
+            }
+
+            .header-content {
+                flex-direction: row;
+                gap: 0;
+            }
+
+            .nav-toggle {
+                display: flex;
+            }
+
+            .nav-backdrop.open {
+                display: block;
+            }
+
+            nav {
+                position: fixed;
+                top: 0;
+                right: 0;
+                z-index: 30;
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: flex-start;
+                gap: 0;
+                width: min(320px, calc(100vw - 56px));
+                max-width: none;
+                height: 100vh;
+                padding: 72px 28px 28px;
+                border-left: 1px solid var(--border);
+                background: var(--bg-primary);
+                box-shadow: -18px 0 40px rgba(31, 31, 31, 0.12);
+                overflow-y: auto;
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transform: none;
+                transition: opacity 0.22s ease, visibility 0s linear 0.22s;
+                align-self: auto;
+            }
+
+            nav.open {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+                transition-delay: 0s;
+            }
+
+            .nav-close {
+                display: block;
+            }
+
+            nav a {
+                margin-left: 0;
+                width: 100%;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--border);
+                font-size: 13px;
+            }
+
+            #lang-toggle {
+                align-self: flex-start;
+                margin: 18px 0 0;
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+
+            .article-shell {
+                padding: 52px 0 72px;
+            }
+
+            h1 {
+                max-width: calc(100vw - 40px);
+                font-size: 32px;
+                overflow-wrap: anywhere !important;
+                word-break: break-all !important;
+            }
+
+            .lead {
+                max-width: calc(100vw - 40px);
+                font-size: 18px;
+                overflow-wrap: anywhere !important;
+                word-break: break-all !important;
+            }
+
+            p,
+            li {
+                max-width: calc(100vw - 40px);
+                overflow-wrap: anywhere !important;
+                word-break: break-all !important;
+            }
+
+            h2 {
+                font-size: 24px;
+            }
+
+            .diagram-card {
+                padding: 12px;
+            }
+
+            .fit-table {
+                min-width: 680px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a class="logo" href="../index.html">Kyte<span>Store</span></a>
+                <button class="nav-toggle" type="button" aria-label="打开导航" aria-controls="site-nav" aria-expanded="false" onclick="toggleNav()">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="nav-backdrop" onclick="closeNav()" aria-hidden="true"></div>
+                <nav id="site-nav" aria-label="主导航">
+                    <button class="nav-close" type="button" aria-label="关闭导航" onclick="closeNav()">&times;</button>
+                    <a href="../index.html" data-i18n="nav-home">首页</a>
+                    <a href="../index.html#architecture" data-i18n="nav-architecture">架构</a>
+                    <a href="../index.html#performance" data-i18n="nav-performance">性能</a>
+                    <a class="active" href="../blog.html" data-i18n="nav-blog">博客</a>
+                    <a href="../whitepaper.html" data-i18n="nav-docs">文档</a>
+                    <a href="../index.html#contact" data-i18n="nav-contact">联系我们</a>
+                    <button id="lang-toggle" data-i18n="lang-toggle" onclick="toggleLang()">EN</button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="article-shell">
+        <div class="container">
+            <article class="article" data-lang-block="zh">
+                <a class="breadcrumb" href="../blog.html">返回博客列表</a>
+                <div class="meta">可靠性工程 · 2026-06-01</div>
+                <h1>KyteStore 的混沌测试最佳实践</h1>
+                <p class="generated-note">本文使用大模型，基于实际的代码实现自动生成。</p>
+
+                <p class="lead">对存储系统来说，稳定性不是“进程不退出”这么简单，而是故障发生时仍然不返回错误的数据状态。KyteStore 的本地混沌测试把这一点写进了测试 oracle：允许故障窗口内返回可重试不可用，但成功写入的数据不能丢，已删除的数据不能复活，LIST 不能把账本中存在的对象漏掉。</p>
+
+                <div class="toc-box">
+                    <strong>本文大纲</strong>
+                    <ol>
+                        <li>什么是混沌测试</li>
+                        <li>混沌测试和 UT、集成测试的区别</li>
+                        <li>KyteStore 的混沌测试逻辑</li>
+                        <li>KyteStore 的混沌测试不足之处</li>
+                    </ol>
+                </div>
+
+                <h2>1. 什么是混沌测试</h2>
+                <p>混沌测试是一种受控实验。它先定义系统的稳定状态和可验证不变量，再主动注入进程退出、节点下线、版本更新等扰动，最后用自动化判定逻辑判断系统是否仍然满足预期。它的重点不是制造随机事故，而是把真实生产环境中迟早会发生的故障，提前放到可复现、可收敛、可分析的环境里。</p>
+                <p>在分布式存储系统里，混沌测试尤其重要。因为数据正确性往往跨越 FE、MetaServer、DataServer、复制链路、后台恢复和远端对象存储。单个模块看起来正确，并不代表它们在节点重启、主从切换、拓扑刷新和写入恢复交叠时仍然保持正确。</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">混沌测试的受控实验闭环</div>
+                    <svg viewBox="0 0 900 420" role="img" aria-label="混沌测试从稳定状态、故障注入到观测验证的闭环">
+                        <defs>
+                            <marker id="chaos-loop-zh" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+                        <rect x="54" y="70" width="172" height="92" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="140" y="104" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">定义稳定状态</text>
+                        <text x="140" y="132" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">数据可读、可列出</text>
+                        <text x="140" y="150" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">拓扑健康</text>
+
+                        <rect x="284" y="70" width="172" height="92" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="370" y="104" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">注入扰动</text>
+                        <text x="370" y="132" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">重启 / kill / 下线</text>
+                        <text x="370" y="150" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">滚动更新</text>
+
+                        <rect x="514" y="70" width="172" height="92" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="600" y="104" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">持续施压</text>
+                        <text x="600" y="132" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">PUT / GET / DELETE</text>
+                        <text x="600" y="150" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">HEAD / LIST / Range</text>
+
+                        <rect x="674" y="232" width="172" height="92" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="760" y="266" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">自动验证</text>
+                        <text x="760" y="294" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">对象账本</text>
+                        <text x="760" y="312" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">不变量采样</text>
+
+                        <rect x="374" y="232" width="210" height="92" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="479" y="266" text-anchor="middle" font-family="Arial" font-size="15" fill="#6F4B20">判定产品风险</text>
+                        <text x="479" y="294" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">错数据是失败</text>
+                        <text x="479" y="312" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">可重试不可用可接受</text>
+
+                        <path d="M226 116 H274" stroke="#2F5F8F" stroke-width="2" marker-end="url(#chaos-loop-zh)"></path>
+                        <path d="M456 116 H504" stroke="#2F5F8F" stroke-width="2" marker-end="url(#chaos-loop-zh)"></path>
+                        <path d="M686 116 C760 128, 788 174, 768 222" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#chaos-loop-zh)"></path>
+                        <path d="M674 278 H594" stroke="#2F5F8F" stroke-width="2" marker-end="url(#chaos-loop-zh)"></path>
+                        <path d="M374 278 C188 278, 120 232, 140 172" fill="none" stroke="#2F5F8F" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#chaos-loop-zh)"></path>
+
+                        <text x="260" y="104" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">实验变量</text>
+                        <text x="712" y="202" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">观测</text>
+                        <text x="254" y="292" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">修复后回归</text>
+                    </svg>
+                </div>
+
+                <p>因此，好的混沌测试有三个前提：第一，故障必须可控，不能让测试本身变成不可解释的噪声；第二，判定标准必须足够硬，不能把数据丢失解释成“临时抖动”；第三，结果必须可复现，失败后要留下账本、操作记录、故障历史和日志，方便定位根因。</p>
+
+                <h2>2. 混沌测试和 UT、集成测试的区别</h2>
+                <p>UT、集成测试和混沌测试不是互相替代的关系。UT 适合验证函数、类和局部状态机；集成测试适合验证少量组件串起来后的接口语义；混沌测试则关注运行中的系统在真实故障和持续流量下是否仍然满足高层不变量。</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">测试层级与覆盖边界</div>
+                    <svg viewBox="0 0 900 430" role="img" aria-label="UT、集成测试和混沌测试的覆盖边界">
+                        <defs>
+                            <marker id="test-stack-zh" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+                        <rect x="90" y="280" width="220" height="70" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="200" y="310" text-anchor="middle" font-family="Arial" font-size="16" fill="#1E4A6E">UT</text>
+                        <text x="200" y="334" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">局部函数和状态机</text>
+
+                        <rect x="340" y="190" width="220" height="86" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="450" y="224" text-anchor="middle" font-family="Arial" font-size="16" fill="#1F1F1F">集成测试</text>
+                        <text x="450" y="250" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">组件协作和 API 语义</text>
+
+                        <rect x="590" y="82" width="220" height="102" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="700" y="118" text-anchor="middle" font-family="Arial" font-size="16" fill="#6F4B20">混沌测试</text>
+                        <text x="700" y="144" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">真实进程、故障、恢复</text>
+                        <text x="700" y="164" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">持续流量和不变量</text>
+
+                        <path d="M310 315 C358 304, 356 250, 340 232" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#test-stack-zh)"></path>
+                        <path d="M560 232 C618 218, 610 148, 590 132" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#test-stack-zh)"></path>
+
+                        <line x1="90" y1="382" x2="810" y2="382" stroke="#C4C0B8" stroke-width="2"></line>
+                        <path d="M90 382 H810" stroke="#2F5F8F" stroke-width="2" marker-end="url(#test-stack-zh)"></path>
+                        <text x="200" y="406" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">低成本、高定位精度</text>
+                        <text x="700" y="406" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">高真实性、高系统覆盖</text>
+                    </svg>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table fit-table">
+                        <thead>
+                            <tr>
+                                <th>测试类型</th>
+                                <th>主要验证对象</th>
+                                <th>故障模型</th>
+                                <th>判定方式</th>
+                                <th>适合发现的问题</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>UT</td>
+                                <td>单个函数、类、局部模块。</td>
+                                <td>Mock、failpoint、边界输入。</td>
+                                <td>断言内部状态和返回值。</td>
+                                <td>算法错误、状态机转移错误、边界条件。</td>
+                            </tr>
+                            <tr>
+                                <td>集成测试</td>
+                                <td>少数组件组合后的 API 行为。</td>
+                                <td>受控依赖、固定数据集、少量异常路径。</td>
+                                <td>接口返回、日志、最终状态。</td>
+                                <td>协议不兼容、配置错误、组件协作问题。</td>
+                            </tr>
+                            <tr>
+                                <td>混沌测试</td>
+                                <td>运行中的完整系统。</td>
+                                <td>进程退出、节点下线、滚动更新、恢复交叠。</td>
+                                <td>外部可见不变量和模型化账本。</td>
+                                <td>恢复漏洞、错误 404、错读、LIST 漏项、后台修复不收敛。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>KyteStore 仍然需要大量 UT 和集成测试来缩小问题定位范围，但混沌测试承担的是最后一层系统性验证：在真实 server 进程、真实 FE HTTP 流量和真实本地集群拓扑下，验证对象存储语义是否能经受故障扰动。</p>
+
+                <h2>3. KyteStore 的混沌测试逻辑</h2>
+                <p>KyteStore 的本地混沌测试入口是 <code>scripts/tests/chaos/local_chaos.py</code>。它默认启动一套本地集群：1 个 FDB、3 个 MetaServer、3 个 DataServer 和 3 个 FrontEnd，并准备 2 倍节点池用于故障恢复和扩缩容场景。测试通过 FE HTTP 接口发起 S3 风格对象请求，而不是绕过产品路径直接调用内部函数。</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">KyteStore 本地混沌测试管线</div>
+                    <svg viewBox="0 0 900 520" role="img" aria-label="KyteStore 本地混沌测试的组件关系">
+                        <defs>
+                            <marker id="kyte-chaos-zh" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+                        <rect x="52" y="54" width="238" height="112" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="171" y="88" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">ClusterManager</text>
+                        <text x="171" y="114" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">生成 kyte.yml</text>
+                        <text x="171" y="134" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">启动 FDB / MS / DS / FE</text>
+                        <text x="171" y="154" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">维护 active / spare 节点池</text>
+
+                        <rect x="342" y="54" width="220" height="112" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="452" y="88" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Workload Workers</text>
+                        <text x="452" y="114" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">PUT / overwrite / DELETE</text>
+                        <text x="452" y="134" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">GET / HEAD / Range</text>
+                        <text x="452" y="154" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">prefix / delimiter / page LIST</text>
+
+                        <rect x="614" y="54" width="220" height="112" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="724" y="88" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">FE HTTP Surface</text>
+                        <text x="724" y="114" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">通过正式对象协议访问</text>
+                        <text x="724" y="134" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">覆盖 local_only / read_cache</text>
+                        <text x="724" y="154" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">/ read_write 三类角色</text>
+
+                        <rect x="52" y="250" width="238" height="120" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="171" y="284" text-anchor="middle" font-family="Arial" font-size="15" fill="#6F4B20">ChaosEngine</text>
+                        <text x="171" y="310" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">MS / DS / FE restart</text>
+                        <text x="171" y="330" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">kill-start / stop-start / update</text>
+                        <text x="171" y="350" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">offline-ds / dead-ds</text>
+
+                        <rect x="342" y="250" width="220" height="120" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="452" y="284" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">model.sqlite</text>
+                        <text x="452" y="310" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">对象状态账本</text>
+                        <text x="452" y="330" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">操作历史 / 故障历史</text>
+                        <text x="452" y="350" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">invariants / failures</text>
+
+                        <rect x="614" y="250" width="220" height="120" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="724" y="284" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Verifier + Invariants</text>
+                        <text x="724" y="310" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">周期校验对象字节</text>
+                        <text x="724" y="330" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">检查 DS 在线和 namespace</text>
+                        <text x="724" y="350" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">最终生成 report.md</text>
+
+                        <path d="M290 110 H332" stroke="#2F5F8F" stroke-width="2" marker-end="url(#kyte-chaos-zh)"></path>
+                        <path d="M562 110 H604" stroke="#2F5F8F" stroke-width="2" marker-end="url(#kyte-chaos-zh)"></path>
+                        <path d="M724 166 V240" stroke="#2F5F8F" stroke-width="2" marker-end="url(#kyte-chaos-zh)"></path>
+                        <path d="M342 310 H300" stroke="#9A6B2F" stroke-width="2" marker-end="url(#kyte-chaos-zh)"></path>
+                        <path d="M562 310 H604" stroke="#2F5F8F" stroke-width="2" marker-end="url(#kyte-chaos-zh)"></path>
+                        <path d="M171 250 V176" stroke="#9A6B2F" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#kyte-chaos-zh)"></path>
+
+                        <rect x="230" y="420" width="440" height="54" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="450" y="452" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">故障、流量、账本和不变量在同一轮测试中并发运行</text>
+                    </svg>
+                </div>
+
+                <p>这套测试的核心是模型化账本。每次成功写入都会在 SQLite 中记录 key、generation、size、sha256 和状态；测试数据由 seed、key 和 generation 确定性生成，因此验证器可以在后续 GET、HEAD、Range GET、LIST 中严格比对结果。overwrite 超时或返回不确定时，账本会保留候选版本，后续通过真实可见字节来收敛。</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">对象状态账本与可接受返回</div>
+                    <svg viewBox="0 0 900 440" role="img" aria-label="KyteStore chaos 测试的对象状态账本和 oracle">
+                        <defs>
+                            <marker id="oracle-zh" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+                        <rect x="76" y="74" width="176" height="76" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="164" y="106" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">deleted</text>
+                        <text x="164" y="130" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">不存在或已删除</text>
+
+                        <rect x="362" y="74" width="176" height="76" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="450" y="106" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">present</text>
+                        <text x="450" y="130" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">generation + sha256</text>
+
+                        <rect x="648" y="74" width="176" height="76" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="736" y="106" text-anchor="middle" font-family="Arial" font-size="15" fill="#6F4B20">unknown</text>
+                        <text x="736" y="130" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">超时或覆盖写不确定</text>
+
+                        <path d="M252 112 H352" stroke="#2F5F8F" stroke-width="2" marker-end="url(#oracle-zh)"></path>
+                        <text x="302" y="96" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">PUT 成功</text>
+
+                        <path d="M450 150 C450 190, 228 192, 174 158" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#oracle-zh)"></path>
+                        <text x="318" y="196" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">DELETE 成功</text>
+
+                        <path d="M538 112 H638" stroke="#9A6B2F" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#oracle-zh)"></path>
+                        <text x="588" y="96" text-anchor="middle" font-family="Arial" font-size="12" fill="#9A6B2F">覆盖写不确定</text>
+
+                        <path d="M736 150 C736 204, 520 208, 470 158" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#oracle-zh)"></path>
+                        <text x="620" y="212" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">后续 GET 收敛</text>
+
+                        <rect x="72" y="258" width="224" height="106" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="184" y="290" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">present 的 oracle</text>
+                        <text x="184" y="318" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">200 且字节正确：通过</text>
+                        <text x="184" y="338" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">可重试不可用：故障期可接受</text>
+                        <text x="184" y="358" text-anchor="middle" font-family="Arial" font-size="12" fill="#9A6B2F">404 或错字节：失败</text>
+
+                        <rect x="338" y="258" width="224" height="106" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="450" y="290" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">deleted 的 oracle</text>
+                        <text x="450" y="318" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">404：通过</text>
+                        <text x="450" y="338" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">可重试不可用：故障期可接受</text>
+                        <text x="450" y="358" text-anchor="middle" font-family="Arial" font-size="12" fill="#9A6B2F">2xx：失败</text>
+
+                        <rect x="604" y="258" width="224" height="106" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="716" y="290" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">LIST 的 oracle</text>
+                        <text x="716" y="318" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">present 不能漏</text>
+                        <text x="716" y="338" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">deleted 不能出现</text>
+                        <text x="716" y="358" text-anchor="middle" font-family="Arial" font-size="12" fill="#9A6B2F">不完整却返回 200：失败</text>
+                    </svg>
+                </div>
+
+                <p>故障注入侧，默认动作集合偏向 DataServer：restart、kill-start、stop-start、update、rolling update、offline-ds 和 dead-ds 都会被覆盖；MetaServer 和 FrontEnd 也会被重启、kill/start、stop/start 和 update。默认每次只执行一个 chaos action，并在 DS 扰动之间等待恢复门禁，避免把“单 DS 故障下应当恢复”与“多个独立故障同时发生”的语义混在一起。</p>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table fit-table">
+                        <thead>
+                            <tr>
+                                <th>模块</th>
+                                <th>当前实现</th>
+                                <th>关键意义</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>集群启动</td>
+                                <td>本地生成配置，默认 3MS / 3DS / 3FE，2x 节点池。</td>
+                                <td>测试不依赖手工环境，失败可复现。</td>
+                            </tr>
+                            <tr>
+                                <td>业务流量</td>
+                                <td>24 个 worker 默认执行 PUT、overwrite、GET、HEAD、Range、DELETE、LIST 等操作。</td>
+                                <td>覆盖对象协议常规读写和目录枚举语义。</td>
+                            </tr>
+                            <tr>
+                                <td>状态账本</td>
+                                <td><code>model.sqlite</code> 保存对象状态、操作、故障、不变量和失败记录。</td>
+                                <td>把正确性判定从日志观察升级为可查询的模型。</td>
+                            </tr>
+                            <tr>
+                                <td>恢复门禁</td>
+                                <td>DS 扰动后等待进程状态、注册状态、namespace health 和 write-buffer under-replicated chunks 收敛。</td>
+                                <td>确保下一次 DS 故障发生前，上一轮修复已经完成。</td>
+                            </tr>
+                            <tr>
+                                <td>产物留存</td>
+                                <td>保留命令日志、验证摘要、metrics snapshots、<code>report.md</code> 和本地运行目录。</td>
+                                <td>失败后能从对象级证据追到集群级状态。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>KyteStore 的实践原则</h3>
+                <ul>
+                    <li><strong>以用户可见语义为准。</strong>测试通过 FE HTTP 访问正式对象接口，判定 GET、HEAD、LIST 等外部行为，而不是只检查内部日志。</li>
+                    <li><strong>错数据比不可用更严重。</strong>故障窗口内返回 retryable unavailable 可以接受；把 present 对象返回成 404、把 deleted 对象返回成 2xx、或返回错误字节，都必须判失败。</li>
+                    <li><strong>每个成功写入都进入账本。</strong>对象内容由 seed 确定性生成，后续验证可以精确对比 size、sha256 和 range 内容。</li>
+                    <li><strong>故障注入必须有恢复门禁。</strong>尤其是 DS 故障，KyteStore 会等待 namespace health 和副本恢复状态收敛，再继续注入新的 DS 扰动。</li>
+                    <li><strong>保持长期运行可持续。</strong>测试有 live bytes、live objects 和删除水位线，避免长时间压力测试被测试数据无限增长拖垮。</li>
+                </ul>
+
+                <h2>4. KyteStore 的混沌测试不足之处</h2>
+                <p>当前本地混沌测试已经能覆盖进程级故障、DS 生命周期、滚动更新、对象读写语义和恢复门禁，但它还不是完整的分布式故障实验平台。最明显的缺口是网络和磁盘 IO：真实生产环境中，很多故障不是进程直接退出，而是网络延迟、单向丢包、磁盘写入抖动、fsync 变慢、磁盘满、坏块或 cgroup 资源压力。</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">当前覆盖与后续增强方向</div>
+                    <svg viewBox="0 0 900 470" role="img" aria-label="KyteStore chaos 测试当前覆盖和未来缺口">
+                        <defs>
+                            <marker id="gap-zh" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+                        <rect x="70" y="58" width="330" height="298" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="235" y="94" text-anchor="middle" font-family="Arial" font-size="16" fill="#1E4A6E">已经覆盖</text>
+
+                        <rect x="106" y="124" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="235" y="152" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">MS / DS / FE restart、kill、stop</text>
+                        <rect x="106" y="184" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="235" y="212" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">DS offline、dead replacement、滚动更新</text>
+                        <rect x="106" y="244" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="235" y="272" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">对象账本校验和 namespace health</text>
+                        <rect x="106" y="304" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="235" y="332" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">local_only / read_cache / read_write 角色</text>
+
+                        <rect x="500" y="58" width="330" height="298" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="665" y="94" text-anchor="middle" font-family="Arial" font-size="16" fill="#6F4B20">后续需要加强</text>
+
+                        <rect x="536" y="124" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="665" y="152" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">网络延迟、丢包、分区、单向不可达</text>
+                        <rect x="536" y="184" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="665" y="212" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">磁盘 IO 抖动、fsync 延迟、磁盘满</text>
+                        <rect x="536" y="244" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="665" y="272" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">CPU / 内存压力和后台任务竞争</text>
+                        <rect x="536" y="304" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="665" y="332" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">远端 S3 错误注入和跨可用区场景</text>
+
+                        <path d="M400 206 H490" stroke="#2F5F8F" stroke-width="2" marker-end="url(#gap-zh)"></path>
+                        <text x="445" y="194" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">从进程故障走向资源故障</text>
+                    </svg>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table fit-table">
+                        <thead>
+                            <tr>
+                                <th>缺口</th>
+                                <th>为什么重要</th>
+                                <th>后续实现方向</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>网络故障</td>
+                                <td>分布式系统常见问题是延迟、丢包、半连接和单向不可达，而不是简单的进程退出。</td>
+                                <td>引入 <code>tc/netem</code>、iptables 或 eBPF 级别的故障注入，覆盖 FE-MS、MS-DS、DS-DS 链路。</td>
+                            </tr>
+                            <tr>
+                                <td>磁盘 IO 故障</td>
+                                <td>WAL、RocksDB 和 chunk append 都依赖本地磁盘，fsync 变慢或磁盘满会直接影响写路径。</td>
+                                <td>增加磁盘限速、延迟、ENOSPC、EIO 和 fsync 抖动注入。</td>
+                            </tr>
+                            <tr>
+                                <td>资源压力</td>
+                                <td>后台恢复、compaction、复制和前台请求会竞争 CPU、内存和 IO。</td>
+                                <td>用 cgroup、stress 工具和 workload profile 覆盖资源争抢下的恢复收敛。</td>
+                            </tr>
+                            <tr>
+                                <td>精确 failpoint</td>
+                                <td>进程级故障无法稳定命中特定提交点，例如 WAL 写成功但返回前退出。</td>
+                                <td>增加运行时 failpoint 控制面，支持 pause、error、delay 和一次性触发。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>这些不足不影响当前混沌测试的价值，但会决定它后续能覆盖多深。KyteStore 当前已经把“对象语义正确性”作为硬门槛；下一步要做的是把故障模型从进程生命周期扩展到网络、磁盘和资源层，让测试更接近生产环境的真实退化路径。</p>
+
+                <h3>参考资料</h3>
+                <ul class="reference-list">
+                    <li><a href="https://principlesofchaos.org/" target="_blank" rel="noopener">Principles of Chaos Engineering</a>：混沌工程领域常用的原则说明，强调通过实验发现系统性弱点。</li>
+                    <li><a href="https://arxiv.org/abs/1702.05843" target="_blank" rel="noopener">Chaos Engineering, IEEE Software / arXiv</a>：介绍混沌工程方法如何用于提升大规模软件系统韧性。</li>
+                    <li><a href="https://jepsen.io/" target="_blank" rel="noopener">Jepsen</a>：通过故障注入和模型化验证分析分布式系统一致性的代表性实践。</li>
+                </ul>
+
+                <p class="post-footnote">本文聚焦 KyteStore 当前本地混沌测试框架。网络、磁盘 IO 和资源压力故障会在后续测试框架增强后继续更新。</p>
+            </article>
+
+            <article class="article" data-lang-block="en" hidden>
+                <a class="breadcrumb" href="../blog.html">Back to Blog</a>
+                <div class="meta">Reliability Engineering · 2026-06-01</div>
+                <h1>KyteStore Chaos Testing Best Practices</h1>
+                <p class="generated-note">Generated with a large language model based on the actual code implementation.</p>
+
+                <p class="lead">For a storage system, reliability is not simply whether processes stay alive. The harder requirement is that the system must not return an incorrect data state during failures. KyteStore's local chaos runner encodes that rule in its oracle: retryable unavailable responses are acceptable during a fault window, but successfully written objects must not disappear, deleted objects must not reappear, and LIST must not omit objects that are present in the model ledger.</p>
+
+                <div class="toc-box">
+                    <strong>Outline</strong>
+                    <ol>
+                        <li>What chaos testing means</li>
+                        <li>How chaos testing differs from unit and integration tests</li>
+                        <li>How KyteStore's chaos test works</li>
+                        <li>Current limitations in KyteStore's chaos testing</li>
+                    </ol>
+                </div>
+
+                <h2>1. What Chaos Testing Means</h2>
+                <p>Chaos testing is a controlled experiment. It defines steady state and verifiable invariants, injects disturbances such as process exits, node offline events, and rolling updates, and then uses automated checks to decide whether the system still satisfies its contract. The goal is not random disruption; it is to bring realistic failures into a reproducible and diagnosable test environment.</p>
+                <p>This is especially important for distributed storage. Correctness spans FE, MetaServer, DataServer, replication, recovery, and sometimes a remote object backend. A module can pass its own tests and still fail when restart, failover, topology refresh, and foreground writes overlap.</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Controlled Experiment Loop</div>
+                    <svg viewBox="0 0 900 420" role="img" aria-label="Chaos testing loop from steady state to fault injection and verification">
+                        <defs>
+                            <marker id="chaos-loop-en" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+                        <rect x="54" y="70" width="172" height="92" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="140" y="104" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Define steady state</text>
+                        <text x="140" y="132" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">readable and listable</text>
+                        <text x="140" y="150" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">healthy topology</text>
+
+                        <rect x="284" y="70" width="172" height="92" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="370" y="104" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Inject fault</text>
+                        <text x="370" y="132" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">restart / kill / offline</text>
+                        <text x="370" y="150" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">rolling update</text>
+
+                        <rect x="514" y="70" width="172" height="92" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="600" y="104" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Keep workload on</text>
+                        <text x="600" y="132" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">PUT / GET / DELETE</text>
+                        <text x="600" y="150" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">HEAD / LIST / Range</text>
+
+                        <rect x="674" y="232" width="172" height="92" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="760" y="266" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Verify</text>
+                        <text x="760" y="294" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">object ledger</text>
+                        <text x="760" y="312" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">invariant samples</text>
+
+                        <rect x="374" y="232" width="210" height="92" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="479" y="266" text-anchor="middle" font-family="Arial" font-size="15" fill="#6F4B20">Classify risk</text>
+                        <text x="479" y="294" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">wrong data fails</text>
+                        <text x="479" y="312" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">retryable unavailable is allowed</text>
+
+                        <path d="M226 116 H274" stroke="#2F5F8F" stroke-width="2" marker-end="url(#chaos-loop-en)"></path>
+                        <path d="M456 116 H504" stroke="#2F5F8F" stroke-width="2" marker-end="url(#chaos-loop-en)"></path>
+                        <path d="M686 116 C760 128, 788 174, 768 222" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#chaos-loop-en)"></path>
+                        <path d="M674 278 H594" stroke="#2F5F8F" stroke-width="2" marker-end="url(#chaos-loop-en)"></path>
+                        <path d="M374 278 C188 278, 120 232, 140 172" fill="none" stroke="#2F5F8F" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#chaos-loop-en)"></path>
+
+                        <text x="260" y="104" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">experiment variable</text>
+                        <text x="712" y="202" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">observe</text>
+                        <text x="254" y="292" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">regress after fix</text>
+                    </svg>
+                </div>
+
+                <p>A useful chaos test needs three properties. Faults must be controlled, so the test does not become unexplained noise. The oracle must be strict enough that data loss cannot be explained away as a transient. The artifacts must make failures reproducible, with ledgers, operation history, fault history, and logs kept for diagnosis.</p>
+
+                <h2>2. How Chaos Testing Differs from Unit and Integration Tests</h2>
+                <p>Unit tests, integration tests, and chaos tests serve different layers. Unit tests verify functions, classes, and local state machines. Integration tests verify API semantics across a small group of components. Chaos tests verify that the running system still preserves high-level invariants under real faults and continuous traffic.</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Test Layers and Coverage Boundary</div>
+                    <svg viewBox="0 0 900 430" role="img" aria-label="Coverage boundary between unit tests, integration tests, and chaos tests">
+                        <defs>
+                            <marker id="test-stack-en" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+                        <rect x="90" y="280" width="220" height="70" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="200" y="310" text-anchor="middle" font-family="Arial" font-size="16" fill="#1E4A6E">Unit tests</text>
+                        <text x="200" y="334" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">local functions and states</text>
+
+                        <rect x="340" y="190" width="220" height="86" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="450" y="224" text-anchor="middle" font-family="Arial" font-size="16" fill="#1F1F1F">Integration tests</text>
+                        <text x="450" y="250" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">component and API behavior</text>
+
+                        <rect x="590" y="82" width="220" height="102" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="700" y="118" text-anchor="middle" font-family="Arial" font-size="16" fill="#6F4B20">Chaos tests</text>
+                        <text x="700" y="144" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">real processes and recovery</text>
+                        <text x="700" y="164" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">traffic plus invariants</text>
+
+                        <path d="M310 315 C358 304, 356 250, 340 232" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#test-stack-en)"></path>
+                        <path d="M560 232 C618 218, 610 148, 590 132" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#test-stack-en)"></path>
+
+                        <line x1="90" y1="382" x2="810" y2="382" stroke="#C4C0B8" stroke-width="2"></line>
+                        <path d="M90 382 H810" stroke="#2F5F8F" stroke-width="2" marker-end="url(#test-stack-en)"></path>
+                        <text x="200" y="406" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">low cost, precise diagnosis</text>
+                        <text x="700" y="406" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">high realism, system coverage</text>
+                    </svg>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table fit-table">
+                        <thead>
+                            <tr>
+                                <th>Test Type</th>
+                                <th>Main Target</th>
+                                <th>Fault Model</th>
+                                <th>Oracle</th>
+                                <th>Finds</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Unit test</td>
+                                <td>Single function, class, or local module.</td>
+                                <td>Mocks, failpoints, boundary inputs.</td>
+                                <td>Internal assertions and return values.</td>
+                                <td>Algorithm bugs, state transition bugs, boundary issues.</td>
+                            </tr>
+                            <tr>
+                                <td>Integration test</td>
+                                <td>API behavior across a small component set.</td>
+                                <td>Controlled dependencies and limited exception paths.</td>
+                                <td>API responses, logs, final state.</td>
+                                <td>Protocol mismatch, configuration errors, component interaction bugs.</td>
+                            </tr>
+                            <tr>
+                                <td>Chaos test</td>
+                                <td>The running system.</td>
+                                <td>Process exit, node offline, rolling update, overlapping recovery.</td>
+                                <td>Externally visible invariants and a model ledger.</td>
+                                <td>Recovery bugs, wrong 404, wrong bytes, LIST omission, repair convergence issues.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>KyteStore still relies on unit and integration tests for fast diagnosis. Chaos testing is the final system-level layer: it validates object storage semantics through real server processes, real FE HTTP traffic, and a real local cluster topology.</p>
+
+                <h2>3. How KyteStore's Chaos Test Works</h2>
+                <p>The local runner lives at <code>scripts/tests/chaos/local_chaos.py</code>. By default it starts a local cluster with one FDB, three MetaServers, three DataServers, and three FrontEnds, plus a 2x node pool for recovery and scale scenarios. Workload traffic goes through the FE HTTP surface instead of bypassing product code paths.</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">KyteStore Local Chaos Pipeline</div>
+                    <svg viewBox="0 0 900 520" role="img" aria-label="KyteStore local chaos test component relationship">
+                        <defs>
+                            <marker id="kyte-chaos-en" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+                        <rect x="52" y="54" width="238" height="112" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="171" y="88" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">ClusterManager</text>
+                        <text x="171" y="114" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">generate kyte.yml</text>
+                        <text x="171" y="134" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">start FDB / MS / DS / FE</text>
+                        <text x="171" y="154" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">manage active and spare nodes</text>
+
+                        <rect x="342" y="54" width="220" height="112" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="452" y="88" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">Workload Workers</text>
+                        <text x="452" y="114" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">PUT / overwrite / DELETE</text>
+                        <text x="452" y="134" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">GET / HEAD / Range</text>
+                        <text x="452" y="154" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">prefix / delimiter / paged LIST</text>
+
+                        <rect x="614" y="54" width="220" height="112" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="724" y="88" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">FE HTTP Surface</text>
+                        <text x="724" y="114" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">official object protocol path</text>
+                        <text x="724" y="134" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">local_only / read_cache</text>
+                        <text x="724" y="154" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">/ read_write roles</text>
+
+                        <rect x="52" y="250" width="238" height="120" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="171" y="284" text-anchor="middle" font-family="Arial" font-size="15" fill="#6F4B20">ChaosEngine</text>
+                        <text x="171" y="310" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">MS / DS / FE restart</text>
+                        <text x="171" y="330" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">kill-start / stop-start / update</text>
+                        <text x="171" y="350" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">offline-ds / dead-ds</text>
+
+                        <rect x="342" y="250" width="220" height="120" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="452" y="284" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">model.sqlite</text>
+                        <text x="452" y="310" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">object-state ledger</text>
+                        <text x="452" y="330" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">operation and fault history</text>
+                        <text x="452" y="350" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">invariants and failures</text>
+
+                        <rect x="614" y="250" width="220" height="120" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="724" y="284" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">Verifier + Invariants</text>
+                        <text x="724" y="310" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">verify object bytes</text>
+                        <text x="724" y="330" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">check DS and namespace health</text>
+                        <text x="724" y="350" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">write report.md</text>
+
+                        <path d="M290 110 H332" stroke="#2F5F8F" stroke-width="2" marker-end="url(#kyte-chaos-en)"></path>
+                        <path d="M562 110 H604" stroke="#2F5F8F" stroke-width="2" marker-end="url(#kyte-chaos-en)"></path>
+                        <path d="M724 166 V240" stroke="#2F5F8F" stroke-width="2" marker-end="url(#kyte-chaos-en)"></path>
+                        <path d="M342 310 H300" stroke="#9A6B2F" stroke-width="2" marker-end="url(#kyte-chaos-en)"></path>
+                        <path d="M562 310 H604" stroke="#2F5F8F" stroke-width="2" marker-end="url(#kyte-chaos-en)"></path>
+                        <path d="M171 250 V176" stroke="#9A6B2F" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#kyte-chaos-en)"></path>
+
+                        <rect x="230" y="420" width="440" height="54" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="450" y="452" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">Faults, workload, ledger, and invariants run in the same test window</text>
+                    </svg>
+                </div>
+
+                <p>The core is a model ledger. Every successful write records key, generation, size, checksum, and object state in SQLite. Test bodies are deterministically generated from seed, key, and generation, so later GET, HEAD, Range GET, and LIST verification can be strict. When an overwrite times out or returns an ambiguous result, the ledger keeps candidate versions and converges later using actually visible bytes.</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Object Ledger and Accepted Responses</div>
+                    <svg viewBox="0 0 900 440" role="img" aria-label="KyteStore chaos test object ledger and oracle">
+                        <defs>
+                            <marker id="oracle-en" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+                        <rect x="76" y="74" width="176" height="76" rx="6" fill="#F7F7F5" stroke="#C4C0B8"></rect>
+                        <text x="164" y="106" text-anchor="middle" font-family="Arial" font-size="15" fill="#1F1F1F">deleted</text>
+                        <text x="164" y="130" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">absent or deleted</text>
+
+                        <rect x="362" y="74" width="176" height="76" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="450" y="106" text-anchor="middle" font-family="Arial" font-size="15" fill="#1E4A6E">present</text>
+                        <text x="450" y="130" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">generation + sha256</text>
+
+                        <rect x="648" y="74" width="176" height="76" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="736" y="106" text-anchor="middle" font-family="Arial" font-size="15" fill="#6F4B20">unknown</text>
+                        <text x="736" y="130" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">timeout or ambiguous write</text>
+
+                        <path d="M252 112 H352" stroke="#2F5F8F" stroke-width="2" marker-end="url(#oracle-en)"></path>
+                        <text x="302" y="96" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">PUT success</text>
+
+                        <path d="M450 150 C450 190, 228 192, 174 158" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#oracle-en)"></path>
+                        <text x="318" y="196" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">DELETE success</text>
+
+                        <path d="M538 112 H638" stroke="#9A6B2F" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#oracle-en)"></path>
+                        <text x="588" y="96" text-anchor="middle" font-family="Arial" font-size="12" fill="#9A6B2F">ambiguous overwrite</text>
+
+                        <path d="M736 150 C736 204, 520 208, 470 158" fill="none" stroke="#2F5F8F" stroke-width="2" marker-end="url(#oracle-en)"></path>
+                        <text x="620" y="212" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">reconcile by GET</text>
+
+                        <rect x="72" y="258" width="224" height="106" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="184" y="290" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">present oracle</text>
+                        <text x="184" y="318" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">200 with correct bytes: pass</text>
+                        <text x="184" y="338" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">retryable unavailable: allowed</text>
+                        <text x="184" y="358" text-anchor="middle" font-family="Arial" font-size="12" fill="#9A6B2F">404 or wrong bytes: fail</text>
+
+                        <rect x="338" y="258" width="224" height="106" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="450" y="290" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">deleted oracle</text>
+                        <text x="450" y="318" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">404: pass</text>
+                        <text x="450" y="338" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">retryable unavailable: allowed</text>
+                        <text x="450" y="358" text-anchor="middle" font-family="Arial" font-size="12" fill="#9A6B2F">2xx: fail</text>
+
+                        <rect x="604" y="258" width="224" height="106" rx="6" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="716" y="290" text-anchor="middle" font-family="Arial" font-size="14" fill="#1F1F1F">LIST oracle</text>
+                        <text x="716" y="318" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">present keys cannot be omitted</text>
+                        <text x="716" y="338" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">deleted keys cannot appear</text>
+                        <text x="716" y="358" text-anchor="middle" font-family="Arial" font-size="12" fill="#9A6B2F">incomplete 200: fail</text>
+                    </svg>
+                </div>
+
+                <p>On the fault side, the default mix is DataServer-heavy: restart, kill-start, stop-start, update, rolling update, offline-ds, and dead-ds are covered. MetaServer and FrontEnd restart, kill/start, stop/start, and update are covered as well. The runner executes one chaos action at a time and gates disruptive DS actions on recovery, so the single-DS failure contract is not conflated with multiple independent simultaneous failures.</p>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table fit-table">
+                        <thead>
+                            <tr>
+                                <th>Module</th>
+                                <th>Current Implementation</th>
+                                <th>Why It Matters</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Cluster bootstrap</td>
+                                <td>Generates local config, defaults to 3MS / 3DS / 3FE and a 2x node pool.</td>
+                                <td>The test does not depend on a hand-built environment, and failures are reproducible.</td>
+                            </tr>
+                            <tr>
+                                <td>Workload</td>
+                                <td>24 workers run PUT, overwrite, GET, HEAD, Range, DELETE, LIST, and related object operations by default.</td>
+                                <td>Covers normal object read/write and enumeration semantics.</td>
+                            </tr>
+                            <tr>
+                                <td>State ledger</td>
+                                <td><code>model.sqlite</code> stores object states, operations, faults, invariants, and failure records.</td>
+                                <td>Correctness moves from log inspection to a queryable model.</td>
+                            </tr>
+                            <tr>
+                                <td>Recovery gate</td>
+                                <td>After DS disruption, waits for process state, registration, namespace health, and write-buffer under-replicated chunks to converge.</td>
+                                <td>The next DS fault is injected only after the previous repair has completed.</td>
+                            </tr>
+                            <tr>
+                                <td>Artifacts</td>
+                                <td>Keeps command logs, verification summaries, metrics snapshots, <code>report.md</code>, and the local run directory.</td>
+                                <td>Failures can be traced from object-level evidence to cluster-level state.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>KyteStore Practice Rules</h3>
+                <ul>
+                    <li><strong>Validate user-visible semantics.</strong> The runner uses the FE HTTP object interface and checks externally visible GET, HEAD, LIST, and write behavior.</li>
+                    <li><strong>Wrong data is worse than unavailability.</strong> Retryable unavailable is acceptable during a fault window; wrong 404, wrong bytes, or a deleted object returning 2xx fails the run.</li>
+                    <li><strong>Every successful write enters the ledger.</strong> Object bodies are deterministic, so later verification can compare size, checksum, and range data exactly.</li>
+                    <li><strong>Fault injection needs recovery gates.</strong> For DS failures, KyteStore waits for namespace health and replica repair state before injecting the next DS disruption.</li>
+                    <li><strong>Keep long runs sustainable.</strong> Live bytes, live object count, and delete watermarks prevent test data from growing without bound.</li>
+                </ul>
+
+                <h2>4. Current Limitations in KyteStore's Chaos Testing</h2>
+                <p>The current local chaos test covers process-level faults, DS lifecycle transitions, rolling updates, object semantics, and recovery gates, but it is not yet a complete distributed fault experimentation platform. The largest gaps are network and disk IO. In production, many failures are not clean process exits; they are latency, one-way packet loss, slow fsync, disk full, IO errors, or cgroup pressure.</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Current Coverage and Next Directions</div>
+                    <svg viewBox="0 0 900 470" role="img" aria-label="Current KyteStore chaos coverage and future gaps">
+                        <defs>
+                            <marker id="gap-en" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#2F5F8F"></path>
+                            </marker>
+                        </defs>
+                        <rect x="70" y="58" width="330" height="298" rx="6" fill="#EEF5FB" stroke="#2F5F8F"></rect>
+                        <text x="235" y="94" text-anchor="middle" font-family="Arial" font-size="16" fill="#1E4A6E">Covered Today</text>
+
+                        <rect x="106" y="124" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="235" y="152" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">MS / DS / FE restart, kill, stop</text>
+                        <rect x="106" y="184" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="235" y="212" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">DS offline, dead replacement, rolling update</text>
+                        <rect x="106" y="244" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="235" y="272" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">object-ledger checks and namespace health</text>
+                        <rect x="106" y="304" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="235" y="332" text-anchor="middle" font-family="Arial" font-size="12" fill="#3C3C3C">local_only / read_cache / read_write roles</text>
+
+                        <rect x="500" y="58" width="330" height="298" rx="6" fill="#F5EBDD" stroke="#9A6B2F"></rect>
+                        <text x="665" y="94" text-anchor="middle" font-family="Arial" font-size="16" fill="#6F4B20">Needs More Work</text>
+
+                        <rect x="536" y="124" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="665" y="152" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">network latency, loss, partitions</text>
+                        <rect x="536" y="184" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="665" y="212" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">disk IO jitter, fsync delay, disk full</text>
+                        <rect x="536" y="244" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="665" y="272" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">CPU / memory pressure and background work</text>
+                        <rect x="536" y="304" width="258" height="44" rx="5" fill="#FFFFFF" stroke="#C4C0B8"></rect>
+                        <text x="665" y="332" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6B6B">remote S3 fault injection and zone scenarios</text>
+
+                        <path d="M400 206 H490" stroke="#2F5F8F" stroke-width="2" marker-end="url(#gap-en)"></path>
+                        <text x="445" y="194" text-anchor="middle" font-family="Arial" font-size="12" fill="#2F5F8F">from process faults to resource faults</text>
+                    </svg>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table fit-table">
+                        <thead>
+                            <tr>
+                                <th>Gap</th>
+                                <th>Why It Matters</th>
+                                <th>Next Direction</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Network faults</td>
+                                <td>Distributed systems often fail through latency, loss, half-open links, and one-way reachability issues.</td>
+                                <td>Add <code>tc/netem</code>, iptables, or eBPF-level injection for FE-MS, MS-DS, and DS-DS links.</td>
+                            </tr>
+                            <tr>
+                                <td>Disk IO faults</td>
+                                <td>WAL, RocksDB, and chunk append depend on local storage; slow fsync or disk-full events directly affect writes.</td>
+                                <td>Add disk throttling, delay, ENOSPC, EIO, and fsync jitter injection.</td>
+                            </tr>
+                            <tr>
+                                <td>Resource pressure</td>
+                                <td>Foreground requests compete with recovery, compaction, and replication for CPU, memory, and IO.</td>
+                                <td>Use cgroups, stress tools, and workload profiles to test recovery convergence under contention.</td>
+                            </tr>
+                            <tr>
+                                <td>Precise failpoints</td>
+                                <td>Process-level faults do not reliably hit specific commit points such as after WAL persistence but before response.</td>
+                                <td>Add a runtime failpoint control plane with pause, error, delay, and one-shot triggers.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>These gaps do not reduce the value of the current runner, but they define the next level of coverage. KyteStore already treats object semantic correctness as a hard gate. The next step is to extend the fault model from process lifecycle events to network, disk, and resource degradation, so the tests better match real production failure modes.</p>
+
+                <h3>References</h3>
+                <ul class="reference-list">
+                    <li><a href="https://principlesofchaos.org/" target="_blank" rel="noopener">Principles of Chaos Engineering</a>: common principles for discovering systemic weaknesses through experiments.</li>
+                    <li><a href="https://arxiv.org/abs/1702.05843" target="_blank" rel="noopener">Chaos Engineering, IEEE Software / arXiv</a>: an overview of chaos engineering for improving resilience in large-scale systems.</li>
+                    <li><a href="https://jepsen.io/" target="_blank" rel="noopener">Jepsen</a>: a well-known practice of fault injection and model-based verification for distributed systems.</li>
+                </ul>
+
+                <p class="post-footnote">This article focuses on KyteStore's current local chaos testing framework. Network, disk IO, and resource-pressure faults will be updated as the test framework evolves.</p>
+            </article>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container" data-i18n="footer-p">&copy; 2024 KyteStore. 高性能对象与文件存储加速。北京集智创新科技有限公司。</div>
+    </footer>
+
+    <script>
+    (function () {
+        var T = {
+            en: {
+                'page-title': 'KyteStore Chaos Testing Best Practices - KyteStore Blog',
+                'nav-home': 'HOME',
+                'nav-architecture': 'DESIGN',
+                'nav-performance': 'BENCHMARK',
+                'nav-docs': 'DOCS',
+                'nav-blog': 'BLOG',
+                'nav-contact': 'CONTACT',
+                'lang-toggle': '中',
+                'footer-p': '&copy; 2024 KyteStore. High-Performance Object and File Storage Acceleration. JiZhi Innovation Technology Limit.'
+            },
+            zh: {
+                'page-title': 'KyteStore 的混沌测试最佳实践 - KyteStore 博客',
+                'nav-home': '首页',
+                'nav-architecture': '架构',
+                'nav-performance': '性能',
+                'nav-docs': '文档',
+                'nav-blog': '博客',
+                'nav-contact': '联系我们',
+                'lang-toggle': 'EN',
+                'footer-p': '&copy; 2024 KyteStore. 高性能对象与文件存储加速。北京集智创新科技有限公司。'
+            }
+        };
+
+        var lang = localStorage.getItem('ks-lang') || 'zh';
+
+        function applyLang(l) {
+            var t = T[l];
+            document.querySelectorAll('[data-i18n]').forEach(function (el) {
+                var key = el.getAttribute('data-i18n');
+                if (t[key] !== undefined) {
+                    if (t[key] === null) {
+                        el.style.display = 'none';
+                    } else {
+                        el.style.display = '';
+                        el.innerHTML = t[key];
+                    }
+                }
+            });
+            document.querySelectorAll('[data-lang-block]').forEach(function (el) {
+                el.hidden = el.getAttribute('data-lang-block') !== l;
+            });
+            document.title = t['page-title'];
+            document.documentElement.setAttribute('lang', l === 'zh' ? 'zh-CN' : 'en');
+        }
+
+        var nav = document.getElementById('site-nav');
+        var navToggle = document.querySelector('.nav-toggle');
+        var navBackdrop = document.querySelector('.nav-backdrop');
+
+        window.closeNav = function () {
+            if (!nav) return;
+            nav.classList.remove('open');
+            document.body.classList.remove('nav-open');
+            if (navBackdrop) navBackdrop.classList.remove('open');
+            if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
+        };
+
+        window.toggleNav = function () {
+            if (!nav) return;
+            if (navToggle && window.getComputedStyle(navToggle).display === 'none') {
+                window.closeNav();
+                return;
+            }
+            var willOpen = !nav.classList.contains('open');
+            nav.classList.toggle('open', willOpen);
+            document.body.classList.toggle('nav-open', willOpen);
+            if (navBackdrop) navBackdrop.classList.toggle('open', willOpen);
+            if (navToggle) navToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        };
+
+        if (nav) {
+            nav.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', window.closeNav);
+            });
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') window.closeNav();
+        });
+
+        window.addEventListener('resize', function () {
+            if (navToggle && window.getComputedStyle(navToggle).display === 'none') {
+                window.closeNav();
+            }
+        });
+
+        window.toggleLang = function () {
+            lang = lang === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('ks-lang', lang);
+            applyLang(lang);
+        };
+
+        applyLang(lang);
+    }());
+    </script>
+</body>
+</html>
