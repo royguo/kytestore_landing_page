@@ -1135,81 +1135,34 @@
 
             <div class="performance-group">
                 <h3 data-i18n="perf-file-h3">文件加速性能</h3>
-                <p class="performance-note" data-i18n="file-meta-note">元数据的性能测试，采用的是单个 DS 节点实现，理论上多节点可以线性扩展，达到数百万 QPS</p>
+                <p class="performance-note" data-i18n="file-meta-note">DataServer 和 Client 单个节点是 8 CPU Core 和 16G DRAM</p>
 
                 <div class="table-scroll">
                     <table class="performance-table">
-                        <caption data-i18n="file-meta-caption">元数据性能</caption>
+                        <caption data-i18n="file-meta-caption">Create File 性能</caption>
                         <thead>
                             <tr>
-                                <th data-i18n="file-th-op">OP（操作）</th>
+                                <th data-i18n="file-th-op">Op</th>
+                                <th data-i18n="file-th-topo">Topo</th>
                                 <th data-i18n="file-th-qps">QPS</th>
-                                <th data-i18n="file-th-avg-us">avg_us</th>
-                                <th data-i18n="file-th-wal-p50">WAL p50_us</th>
-                                <th data-i18n="file-th-wal-p99">WAL p99_us</th>
+                                <th data-i18n="file-th-avg-us">AVG US</th>
+                                <th data-i18n="file-th-p99-us">P99 US</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td>create</td>
-                                <td>379,324</td>
-                                <td>2.64</td>
-                                <td>2,114</td>
-                                <td>6,175</td>
+                                <td>Create File</td>
+                                <td>1DS/1Replica</td>
+                                <td>242,927</td>
+                                <td>16,460</td>
+                                <td>30,255</td>
                             </tr>
                             <tr>
-                                <td>unlink</td>
-                                <td>270,512</td>
-                                <td>3.70</td>
-                                <td>5,973</td>
-                                <td>12,690</td>
-                            </tr>
-                            <tr>
-                                <td>rename</td>
-                                <td>237,571</td>
-                                <td>4.21</td>
-                                <td>3,881</td>
-                                <td>13,024</td>
-                            </tr>
-                            <tr>
-                                <td>mkdir</td>
-                                <td>230,950</td>
-                                <td>4.33</td>
-                                <td>5,299</td>
-                                <td>13,327</td>
-                            </tr>
-                            <tr>
-                                <td>rmdir</td>
-                                <td>N/A</td>
-                                <td>N/A</td>
-                                <td>N/A</td>
-                                <td>N/A</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="table-scroll">
-                    <table class="performance-table">
-                        <caption data-i18n="file-data-caption">数据读写性能</caption>
-                        <thead>
-                            <tr>
-                                <th data-i18n="file-th-scenario">测试场景</th>
-                                <th data-i18n="file-th-read-tp">读吞吐</th>
-                                <th data-i18n="file-th-write-tp">写吞吐</th>
-                                <th data-i18n="file-th-avg-lat">平均延迟</th>
-                                <th data-i18n="th-conc">并发数</th>
-                                <th data-i18n="file-th-notes">备注</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
+                                <td>Create File</td>
+                                <td>3DS/3Replica</td>
+                                <td>568,390</td>
+                                <td>7,031</td>
+                                <td>15,072</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1337,12 +1290,14 @@
                 'file-th-protocol': 'Access Protocol',
                 'file-th-path': 'Data Path',
                 'file-th-status': 'Status',
-                'file-meta-caption': 'Metadata Performance',
+                'file-meta-caption': 'Create File Performance',
                 'file-data-caption': 'Data Read/Write Performance',
-                'file-meta-note': 'Metadata performance is measured on a single DS node. In theory, multi-node deployments can scale linearly to millions of QPS.',
-                'file-th-op': 'OP',
+                'file-meta-note': 'Each DataServer and Client node is configured with 8 CPU cores and 16G DRAM.',
+                'file-th-op': 'Op',
+                'file-th-topo': 'Topo',
                 'file-th-qps': 'QPS',
-                'file-th-avg-us': 'avg_us',
+                'file-th-avg-us': 'AVG US',
+                'file-th-p99-us': 'P99 US',
                 'file-th-wal-p50': 'WAL p50_us',
                 'file-th-wal-p99': 'WAL p99_us',
                 'file-th-avg-lat': 'Avg Latency',
@@ -1494,12 +1449,14 @@
                 'file-th-protocol': '接入协议',
                 'file-th-path': '数据路径',
                 'file-th-status': '状态',
-                'file-meta-caption': '元数据性能',
+                'file-meta-caption': 'Create File 性能',
                 'file-data-caption': '数据读写性能',
-                'file-meta-note': '元数据的性能测试，采用的是单个 DS 节点实现，理论上多节点可以线性扩展，达到数百万 QPS',
-                'file-th-op': 'OP（操作）',
+                'file-meta-note': 'DataServer 和 Client 单个节点是 8 CPU Core 和 16G DRAM',
+                'file-th-op': 'Op',
+                'file-th-topo': 'Topo',
                 'file-th-qps': 'QPS',
-                'file-th-avg-us': 'avg_us',
+                'file-th-avg-us': 'AVG US',
+                'file-th-p99-us': 'P99 US',
                 'file-th-wal-p50': 'WAL p50_us',
                 'file-th-wal-p99': 'WAL p99_us',
                 'file-th-avg-lat': '平均延迟',
