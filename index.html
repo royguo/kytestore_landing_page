@@ -1135,7 +1135,7 @@
 
             <div class="performance-group">
                 <h3 data-i18n="perf-file-h3">文件加速性能</h3>
-                <p class="performance-note" data-i18n="file-meta-note">DataServer 和 Client 单个节点是 <strong>8 CPU Core 和 16G DRAM</strong></p>
+                <p class="performance-note" data-i18n="file-meta-note">DataServer 和 Client 单个节点是 <strong>8 CPU Core 和 16G DRAM</strong>。CWF 指 Create-Write-Finish，即完成 4KB 小文件的创建、写入和 Finish。</p>
 
                 <div class="table-scroll">
                     <table class="performance-table">
@@ -1150,18 +1150,18 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td>Create File</td>
+                                <td>4KB CWF</td>
                                 <td>1DS/1Replica</td>
-                                <td>242,927</td>
-                                <td>16,460</td>
-                                <td>30,255</td>
+                                <td>90,745</td>
+                                <td>129,769</td>
+                                <td>191,461</td>
                             </tr>
                             <tr>
-                                <td>Create File</td>
+                                <td>4KB CWF</td>
                                 <td>3DS/3Replica</td>
-                                <td>568,390</td>
-                                <td>7,031</td>
-                                <td>15,072</td>
+                                <td>196,981</td>
+                                <td>60,439</td>
+                                <td>93,121</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1290,7 +1290,7 @@
                 'file-th-path': 'Data Path',
                 'file-th-status': 'Status',
                 'file-data-caption': 'Data Read/Write Performance',
-                'file-meta-note': 'Each DataServer and Client node is configured with <strong>8 CPU cores and 16G DRAM</strong>.',
+                'file-meta-note': 'Each DataServer and Client node is configured with <strong>8 CPU cores and 16G DRAM</strong>. CWF means Create-Write-Finish, measuring 4KB small-file create, write, and finish.',
                 'file-th-op': 'Op',
                 'file-th-topo': 'Topo',
                 'file-th-qps': 'QPS',
@@ -1448,7 +1448,7 @@
                 'file-th-path': '数据路径',
                 'file-th-status': '状态',
                 'file-data-caption': '数据读写性能',
-                'file-meta-note': 'DataServer 和 Client 单个节点是 <strong>8 CPU Core 和 16G DRAM</strong>',
+                'file-meta-note': 'DataServer 和 Client 单个节点是 <strong>8 CPU Core 和 16G DRAM</strong>。CWF 指 Create-Write-Finish，即完成 4KB 小文件的创建、写入和 Finish。',
                 'file-th-op': 'Op',
                 'file-th-topo': 'Topo',
                 'file-th-qps': 'QPS',
