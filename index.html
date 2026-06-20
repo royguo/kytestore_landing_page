@@ -22,19 +22,19 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <style>
         :root {
-            --bg-primary: #FDFCF9;
-            --bg-secondary: #F7F7F5;
-            --bg-tertiary: #F0EFEB;
-            --text-primary: #1F1F1F;
-            --text-secondary: #3C3C3C;
-            --text-muted: #6B6B6B;
-            --accent: #2F5F8F;
-            --accent-dim: #1E4A6E;
-            --border: #E4E4E2;
-            --border-strong: #C4C0B8;
-            --compare-warm: #B87A7E;
-            --compare-warm-bg: #FBF6F5;
-            --compare-cool-bg: #F3F6F8;
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F7F7F8;
+            --bg-tertiary: #EFEFF1;
+            --text-primary: #111111;
+            --text-secondary: #333333;
+            --text-muted: #6B6F76;
+            --accent: #111111;
+            --accent-dim: #3F3F46;
+            --border: #E5E7EB;
+            --border-strong: #D1D5DB;
+            --compare-warm: #3F3F46;
+            --compare-warm-bg: #F7F7F8;
+            --compare-cool-bg: #F7F7F8;
         }
 
         * {
@@ -49,11 +49,11 @@
         }
 
         body {
-            font-family: Georgia, "Times New Roman", Times, serif;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             background-color: var(--bg-primary);
             color: var(--text-primary);
-            line-height: 1.7;
-            font-size: 17px;
+            line-height: 1.65;
+            font-size: 16px;
             overflow-x: hidden;
         }
 
@@ -68,10 +68,10 @@
             position: sticky;
             top: 0;
             z-index: 20;
-            border-bottom: 3px double var(--border-strong);
+            border-bottom: 1px solid var(--border);
             padding: 20px 0;
             margin-bottom: 0;
-            background: rgba(253, 252, 249, 0.96);
+            background: rgba(255, 255, 255, 0.88);
             backdrop-filter: blur(10px);
         }
 
@@ -82,26 +82,27 @@
         }
 
         .logo {
-            font-size: 28px;
-            font-weight: bold;
-            letter-spacing: 2px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0;
             color: var(--text-primary);
             text-decoration: none;
         }
 
         .logo span {
-            color: var(--accent);
+            color: var(--text-muted);
         }
 
         nav a {
             color: var(--text-muted);
             text-decoration: none;
             margin-left: 28px;
-            font-size: 13px;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0;
+            text-transform: none;
             transition: color 0.2s;
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
         }
 
         nav a:hover {
@@ -115,11 +116,11 @@
         }
 
         .hero h1 {
-            font-size: 52px;
-            font-weight: normal;
-            letter-spacing: 0.06em;
+            font-size: clamp(42px, 7vw, 86px);
+            font-weight: 560;
+            letter-spacing: 0;
             margin-bottom: 28px;
-            line-height: 1.12;
+            line-height: 0.98;
             color: var(--text-primary);
             overflow-wrap: anywhere;
         }
@@ -136,7 +137,7 @@
             margin: 0 auto;
             display: block;
             border: 1px solid var(--border);
-            box-shadow: 0 4px 28px rgba(31, 31, 31, 0.07);
+            box-shadow: 0 4px 28px rgba(15, 23, 42, 0.06);
         }
 
         .hero-caption {
@@ -189,7 +190,8 @@
             background: var(--bg-primary);
             padding: 32px;
             border: 1px solid var(--border);
-            box-shadow: 0 1px 0 rgba(31, 31, 31, 0.04);
+            border-radius: 8px;
+            box-shadow: none;
         }
 
         .feature-card h3 {
@@ -230,13 +232,13 @@
 
         .comparison-table th:nth-child(2),
         .comparison-table td:nth-child(2) {
-            background: #EEF5FB;
+            background: var(--bg-secondary);
             border-left: 2px solid var(--accent);
             border-right: 2px solid var(--accent);
         }
 
         .comparison-table thead th:nth-child(2) {
-            background: #dbeaf7;
+            background: var(--bg-tertiary);
             color: var(--accent);
         }
 
@@ -352,7 +354,7 @@
             margin: 36px auto 0;
             display: block;
             border: 1px solid var(--border);
-            box-shadow: 0 4px 28px rgba(31, 31, 31, 0.07);
+            box-shadow: 0 4px 28px rgba(15, 23, 42, 0.06);
         }
 
         .metrics {
@@ -501,23 +503,24 @@
         }
 
         footer {
-            border-top: 3px double var(--border-strong);
+            border-top: 1px solid var(--border);
             padding: 36px 0;
             text-align: center;
             color: var(--text-muted);
             font-size: 13px;
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
         }
 
         #lang-toggle {
-            background: none;
-            border: 1px solid var(--border-strong);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
             color: var(--text-muted);
             cursor: pointer;
             margin-left: 28px;
-            font-size: 11px;
-            letter-spacing: 0.12em;
-            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
             padding: 4px 10px;
             transition: color 0.2s, border-color 0.2s;
             vertical-align: middle;
@@ -532,11 +535,12 @@
         .nav-close {
             display: none;
             appearance: none;
-            background: none;
-            border: 1px solid var(--border-strong);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
             color: var(--text-muted);
             cursor: pointer;
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
         }
 
         .nav-toggle {
@@ -610,7 +614,7 @@
                 padding: 72px 28px 28px;
                 border-left: 1px solid var(--border);
                 background: var(--bg-primary);
-                box-shadow: -18px 0 40px rgba(31, 31, 31, 0.12);
+                box-shadow: -18px 0 40px rgba(15, 23, 42, 0.12);
                 overflow-y: auto;
                 opacity: 0;
                 visibility: hidden;

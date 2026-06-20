@@ -22,20 +22,20 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <style>
         :root {
-            --bg: #fffdf9;
+            --bg: #ffffff;
             --paper: #ffffff;
-            --panel: #f7f1e8;
-            --panel-strong: #efe4d7;
-            --text: #24211f;
-            --muted: #6e665f;
-            --border: #ded4c8;
-            --border-strong: #c8b8a8;
-            --accent: #2f6397;
-            --accent-warm: #b65d32;
-            --green: #177245;
-            --blue-soft: #eef5fc;
-            --green-soft: #eef8f2;
-            --gold-soft: #fff7e6;
+            --panel: #f7f7f8;
+            --panel-strong: #efeff1;
+            --text: #111111;
+            --muted: #6b6f76;
+            --border: #e5e7eb;
+            --border-strong: #d1d5db;
+            --accent: #111111;
+            --accent-warm: #3f3f46;
+            --green: #333333;
+            --blue-soft: #f7f7f8;
+            --green-soft: #f7f7f8;
+            --gold-soft: #f7f7f8;
         }
 
         * {
@@ -51,8 +51,8 @@
         body {
             background: var(--bg);
             color: var(--text);
-            font-family: Georgia, "Times New Roman", "Microsoft YaHei", serif;
-            line-height: 1.75;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            line-height: 1.7;
             overflow-x: hidden;
         }
 
@@ -85,8 +85,10 @@
             display: inline-block;
             color: var(--text);
             margin-bottom: 6px;
-            font-size: 24px;
-            letter-spacing: 0.04em;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0;
             text-decoration: none;
         }
 
@@ -95,22 +97,22 @@
         }
 
         .brand span {
-            color: var(--accent);
+            color: var(--muted);
         }
 
         .side-meta {
             color: var(--muted);
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
             font-size: 12px;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
+            letter-spacing: 0;
+            text-transform: none;
         }
 
         .toc {
             display: grid;
             gap: 18px;
             margin-top: 28px;
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
             font-size: 13px;
         }
 
@@ -137,18 +139,19 @@
             justify-content: center;
             min-height: 38px;
             margin-top: 18px;
-            border: 1px solid var(--accent-warm);
-            background: #fff8ef;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--paper);
             color: var(--accent-warm);
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
             font-size: 13px;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
+            letter-spacing: 0;
+            text-transform: none;
         }
 
         .back:hover {
-            background: var(--accent-warm);
-            color: #fff;
+            background: var(--panel-strong);
+            color: var(--text);
             text-decoration: none;
         }
 
@@ -161,19 +164,20 @@
         .eyebrow {
             margin-bottom: 12px;
             color: var(--muted);
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
             font-size: 12px;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
+            letter-spacing: 0;
+            text-transform: none;
             overflow-wrap: anywhere;
         }
 
         h1 {
             max-width: 860px;
             margin-bottom: 16px;
-            font-size: 46px;
-            font-weight: normal;
-            line-height: 1.16;
+            font-size: clamp(40px, 6vw, 72px);
+            font-weight: 560;
+            letter-spacing: 0;
+            line-height: 1.02;
         }
 
         h2 {
@@ -216,9 +220,10 @@
         code {
             padding: 2px 5px;
             border: 1px solid var(--border);
-            background: #fff8ef;
+            border-radius: 4px;
+            background: var(--panel);
             color: var(--text);
-            font-family: "Courier New", monospace;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
             font-size: 0.92em;
         }
 
@@ -259,14 +264,14 @@
             width: 100%;
             height: auto;
             border: 1px solid var(--border);
-            background: #fff;
-            box-shadow: 0 4px 24px rgba(31, 31, 31, 0.06);
+            background: var(--paper);
+            box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
         }
 
         .caption {
             margin-top: 10px;
             color: var(--muted);
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
             font-size: 13px;
         }
 
@@ -288,6 +293,7 @@
         .info-box {
             padding: 20px;
             border: 1px solid var(--border);
+            border-radius: 8px;
             background: var(--paper);
         }
 
@@ -322,10 +328,10 @@
         th {
             background: var(--panel);
             color: var(--text);
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
             font-size: 12px;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
+            letter-spacing: 0;
+            text-transform: none;
         }
 
         td {
@@ -361,6 +367,7 @@
             margin: 28px 0;
             padding: 18px;
             border: 1px solid var(--border);
+            border-radius: 8px;
             background: var(--paper);
             overflow-x: auto;
         }
@@ -374,19 +381,19 @@
 
         .svg-text {
             fill: var(--text);
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             font-size: 14px;
         }
 
         .svg-small {
             fill: var(--muted);
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             font-size: 11px;
         }
 
         .svg-title {
             fill: var(--text);
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             font-size: 16px;
             font-weight: 700;
         }
@@ -401,6 +408,7 @@
         .mode {
             padding: 16px;
             border: 1px solid var(--border);
+            border-radius: 8px;
             background: var(--paper);
         }
 
@@ -408,7 +416,7 @@
             display: block;
             margin-bottom: 6px;
             color: var(--accent);
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
         }
 
         .mode span {
@@ -422,7 +430,7 @@
             padding-top: 24px;
             border-top: 1px solid var(--border);
             color: var(--muted);
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
             font-size: 13px;
         }
 
