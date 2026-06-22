@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EC 的基本原理与主流实现方案 - KyteStore 博客</title>
+    <meta name="description" content="介绍 Erasure Coding 的基本原理、Reed-Solomon 编码、修复读放大、LRC、分层 EC、工程落地路径，以及 Azure Storage、Facebook f4、HDFS、Ceph、MinIO 等主流方案。">
+    <meta name="keywords" content="KyteStore, Erasure Coding, EC, Reed-Solomon, LRC, Xorbas, Azure Storage, Facebook f4, HDFS, Ceph, MinIO, 分布式存储, 纠删码">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://kytestore.com/blog/erasure-coding-architecture">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="KyteStore">
+    <meta property="og:title" content="EC 的基本原理与主流实现方案">
+    <meta property="og:description" content="从 Reed-Solomon 到 LRC、分层 EC 和冷温热数据分层，梳理纠删码在云存储系统中的工程取舍。">
+    <meta property="og:url" content="https://kytestore.com/blog/erasure-coding-architecture">
+    <meta property="og:image" content="https://kytestore.com/assets/images/architecture.jpg">
+    <meta property="article:published_time" content="2026-06-22">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <style>
+        :root {
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F7F7F8;
+            --bg-tertiary: #EFEFF1;
+            --text-primary: #111111;
+            --text-secondary: #333333;
+            --text-muted: #6B6F76;
+            --accent: #111111;
+            --accent-dim: #3F3F46;
+            --warm: #3F3F46;
+            --border: #E5E7EB;
+            --border-strong: #D1D5DB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 16px;
+            line-height: 1.76;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            border-bottom: 1px solid var(--border);
+            padding: 20px 0;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            color: var(--text-primary);
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0;
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--text-muted);
+        }
+
+        nav a,
+        #lang-toggle,
+        .breadcrumb,
+        .meta,
+        .generated-note,
+        h3,
+        .diagram-title,
+        .benchmark-table th,
+        footer {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+            letter-spacing: 0;
+            text-transform: none;
+        }
+
+        nav a {
+            margin-left: 28px;
+            color: var(--text-muted);
+            font-size: 12px;
+            text-decoration: none;
+        }
+
+        nav a:hover,
+        nav a.active {
+            color: var(--text-primary);
+        }
+
+        #lang-toggle {
+            margin-left: 28px;
+            padding: 4px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 12px;
+            vertical-align: middle;
+        }
+
+        .nav-toggle,
+        .nav-close {
+            display: none;
+            appearance: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .nav-toggle {
+            width: 40px;
+            height: 36px;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .nav-toggle span {
+            display: block;
+            width: 18px;
+            height: 2px;
+            background: currentColor;
+        }
+
+        .nav-close {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            width: 36px;
+            height: 36px;
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .nav-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 29;
+            background: rgba(31, 31, 31, 0.28);
+        }
+
+        body.nav-open {
+            overflow: hidden;
+        }
+
+        .article-shell {
+            padding: 88px 0 112px;
+        }
+
+        .article {
+            width: 100%;
+            max-width: 860px;
+            margin: 0 auto;
+            min-width: 0;
+        }
+
+        .breadcrumb {
+            display: inline-block;
+            margin-bottom: 34px;
+            color: var(--text-muted);
+            font-size: 12px;
+            text-decoration: none;
+        }
+
+        .breadcrumb::before {
+            content: "<- ";
+        }
+
+        .meta,
+        .generated-note {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .meta {
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            margin-bottom: 24px;
+            color: var(--text-primary);
+            font-size: clamp(40px, 6vw, 72px);
+            font-weight: 560;
+            letter-spacing: 0;
+            line-height: 1.02;
+            overflow-wrap: anywhere;
+        }
+
+        .generated-note {
+            margin: -10px 0 26px;
+            line-height: 1.6;
+        }
+
+        .lead {
+            margin-bottom: 36px;
+            color: var(--text-muted);
+            font-size: 19px;
+            overflow-wrap: anywhere;
+        }
+
+        h2 {
+            margin: 56px 0 14px;
+            color: var(--text-primary);
+            font-size: 30px;
+            font-weight: 560;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+        }
+
+        h3 {
+            margin: 28px 0 10px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        p {
+            margin-bottom: 18px;
+            color: var(--text-secondary);
+            overflow-wrap: anywhere;
+        }
+
+        ul {
+            margin: 0 0 22px 1.3em;
+            color: var(--text-secondary);
+        }
+
+        li {
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        code {
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 0.08em 0.32em;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+            font-size: 0.92em;
+        }
+
+        .toc-box,
+        .note {
+            margin: 30px 0;
+            padding: 20px 22px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        .toc-box strong,
+        .note strong {
+            color: var(--text-primary);
+        }
+
+        .toc-box ol {
+            margin: 12px 0 0 1.25em;
+            color: var(--text-secondary);
+        }
+
+        .diagram-card {
+            margin: 34px 0;
+            padding: 18px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            overflow: hidden;
+        }
+
+        .diagram-card svg {
+            display: block;
+            width: 100%;
+            height: auto;
+            filter: grayscale(1);
+        }
+
+        .diagram-title {
+            margin-bottom: 14px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .table-wrap {
+            width: 100%;
+            margin: 28px 0;
+            overflow-x: auto;
+        }
+
+        .benchmark-table {
+            width: 100%;
+            min-width: 760px;
+            border-collapse: collapse;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+        }
+
+        .benchmark-table th,
+        .benchmark-table td {
+            padding: 12px 14px;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .benchmark-table th {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-size: 12px;
+        }
+
+        .benchmark-table td {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        .benchmark-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .benchmark-table th:last-child,
+        .benchmark-table td:last-child {
+            border-right: none;
+        }
+
+        .fit-table {
+            min-width: 0;
+        }
+
+        .fit-table th:first-child,
+        .fit-table td:first-child {
+            min-width: 128px;
+            white-space: nowrap;
+        }
+
+        .reference-list a {
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .reference-list a:hover {
+            text-decoration: underline;
+        }
+
+        .post-footnote {
+            margin-top: 42px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 36px 0;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                max-width: 100vw;
+                padding: 0 20px;
+            }
+
+            .header-content {
+                flex-direction: row;
+                gap: 0;
+            }
+
+            .nav-toggle {
+                display: flex;
+            }
+
+            .nav-backdrop.open {
+                display: block;
+            }
+
+            nav {
+                position: fixed;
+                top: 0;
+                right: 0;
+                z-index: 30;
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: flex-start;
+                gap: 0;
+                width: min(320px, calc(100vw - 56px));
+                height: 100vh;
+                padding: 72px 28px 28px;
+                border-left: 1px solid var(--border);
+                background: var(--bg-primary);
+                box-shadow: -18px 0 40px rgba(15, 23, 42, 0.12);
+                overflow-y: auto;
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transition: opacity 0.22s ease, visibility 0s linear 0.22s;
+            }
+
+            nav.open {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+                transition-delay: 0s;
+            }
+
+            .nav-close {
+                display: block;
+            }
+
+            nav a {
+                margin-left: 0;
+                width: 100%;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--border);
+                font-size: 13px;
+            }
+
+            #lang-toggle {
+                align-self: flex-start;
+                margin: 18px 0 0;
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+
+            .article-shell {
+                padding: 52px 0 72px;
+            }
+
+            h1 {
+                max-width: calc(100vw - 40px);
+                font-size: 38px;
+                overflow-wrap: anywhere !important;
+                word-break: break-all !important;
+            }
+
+            .lead,
+            p,
+            li {
+                max-width: calc(100vw - 40px);
+                overflow-wrap: anywhere !important;
+                word-break: break-all !important;
+            }
+
+            .lead {
+                font-size: 18px;
+            }
+
+            h2 {
+                font-size: 24px;
+            }
+
+            .diagram-card {
+                padding: 12px;
+            }
+
+            .fit-table {
+                min-width: 720px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a class="logo" href="../index.html">Kyte<span>Store</span></a>
+                <button class="nav-toggle" type="button" aria-label="打开导航" aria-controls="site-nav" aria-expanded="false" onclick="toggleNav()">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="nav-backdrop" onclick="closeNav()" aria-hidden="true"></div>
+                <nav id="site-nav" aria-label="主导航">
+                    <button class="nav-close" type="button" aria-label="关闭导航" onclick="closeNav()">&times;</button>
+                    <a href="../index.html" data-i18n="nav-home">首页</a>
+                    <a href="../index.html#architecture" data-i18n="nav-architecture">架构</a>
+                    <a href="../index.html#performance" data-i18n="nav-performance">性能</a>
+                    <a class="active" href="../blog.html" data-i18n="nav-blog">博客</a>
+                    <a href="../whitepaper.html" data-i18n="nav-docs">文档</a>
+                    <a href="../index.html#contact" data-i18n="nav-contact">联系我们</a>
+                    <button id="lang-toggle" data-i18n="lang-toggle" onclick="toggleLang()">EN</button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="article-shell">
+        <div class="container">
+            <article class="article" data-lang-block="zh">
+                <a class="breadcrumb" href="../blog.html">返回博客列表</a>
+                <div class="meta">存储架构 · 2026-06-22</div>
+                <h1>EC 的基本原理与主流实现方案</h1>
+                <p class="generated-note">本文使用大模型，基于公开论文、工程文档和存储系统常见实践整理生成。</p>
+
+                <p class="lead">Erasure Coding，通常简称 EC 或纠删码，是云存储把副本成本降下来的核心技术之一。它把一份数据切成多个数据块，再计算出若干校验块；只要丢失块数不超过设计上限，系统就能用剩余块恢复原始数据。</p>
+
+                <div class="toc-box">
+                    <strong>本文大纲</strong>
+                    <ol>
+                        <li>EC 解决什么问题</li>
+                        <li>Reed-Solomon 的基本原理</li>
+                        <li>工程实现里的核心难点</li>
+                        <li>主流 EC 架构方案</li>
+                        <li>论文和开源系统给出的取舍</li>
+                    </ol>
+                </div>
+
+                <h2>1. EC 解决什么问题</h2>
+                <p>最容易理解的数据保护方式是多副本。三副本把每个对象写三份，任意丢一份或两份仍可读，但存储开销是 3x。EC 的目标是在接近甚至高于多副本可靠性的前提下，把空间开销降到 1.2x 到 1.6x 左右。</p>
+                <p>以常见的 <code>RS(6,3)</code> 为例，系统把对象切成 6 个数据块，再计算 3 个校验块，总共写入 9 个块。任意丢失 3 个块，仍可从剩余 6 个块恢复原始对象。空间开销是 <code>(6+3)/6 = 1.5x</code>，明显低于三副本。</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">三副本与 EC 的空间开销差异</div>
+                    <svg viewBox="0 0 900 360" role="img" aria-label="三副本和 EC 的空间开销对比">
+                        <rect x="70" y="72" width="300" height="78" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="220" y="104" text-anchor="middle" font-family="Arial" font-size="16" fill="#111111">三副本</text>
+                        <text x="220" y="132" text-anchor="middle" font-family="Arial" font-size="13" fill="#6B6F76">A + A + A = 3.0x</text>
+                        <rect x="70" y="180" width="80" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect>
+                        <rect x="180" y="180" width="80" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect>
+                        <rect x="290" y="180" width="80" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect>
+                        <text x="110" y="208" text-anchor="middle" font-family="Arial" font-size="13" fill="#111111">Replica</text>
+                        <text x="220" y="208" text-anchor="middle" font-family="Arial" font-size="13" fill="#111111">Replica</text>
+                        <text x="330" y="208" text-anchor="middle" font-family="Arial" font-size="13" fill="#111111">Replica</text>
+
+                        <rect x="510" y="72" width="320" height="78" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="670" y="104" text-anchor="middle" font-family="Arial" font-size="16" fill="#111111">RS(6,3)</text>
+                        <text x="670" y="132" text-anchor="middle" font-family="Arial" font-size="13" fill="#6B6F76">6 data + 3 parity = 1.5x</text>
+                        <g font-family="Arial" font-size="12" text-anchor="middle">
+                            <rect x="506" y="180" width="48" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="530" y="208" fill="#111111">D1</text>
+                            <rect x="562" y="180" width="48" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="586" y="208" fill="#111111">D2</text>
+                            <rect x="618" y="180" width="48" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="642" y="208" fill="#111111">D3</text>
+                            <rect x="674" y="180" width="48" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="698" y="208" fill="#111111">D4</text>
+                            <rect x="730" y="180" width="48" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="754" y="208" fill="#111111">D5</text>
+                            <rect x="786" y="180" width="48" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="810" y="208" fill="#111111">D6</text>
+                            <rect x="590" y="248" width="48" height="46" rx="5" fill="#F7F7F8" stroke="#71717A"></rect><text x="614" y="276" fill="#111111">P1</text>
+                            <rect x="646" y="248" width="48" height="46" rx="5" fill="#F7F7F8" stroke="#71717A"></rect><text x="670" y="276" fill="#111111">P2</text>
+                            <rect x="702" y="248" width="48" height="46" rx="5" fill="#F7F7F8" stroke="#71717A"></rect><text x="726" y="276" fill="#111111">P3</text>
+                        </g>
+                    </svg>
+                </div>
+
+                <p>EC 的代价也很明确：写入路径要编码，修复时要读取多个块，覆盖写会牵涉校验更新，小对象需要聚合或补齐。它不是免费午餐，而是在成本、可靠性、恢复带宽和访问延迟之间重新分配预算。</p>
+
+                <h2>2. Reed-Solomon 的基本原理</h2>
+                <p>工程系统里最经典的 EC 是 Reed-Solomon。可以把它理解成一种线性编码：数据块组成向量，编码矩阵乘以数据向量，得到数据块和校验块。恢复时，只要拿到足够多的块，就能求逆矩阵还原原始数据。</p>
+                <p>实际实现通常在有限域上做运算，例如 GF(2^8) 或 GF(2^16)。有限域让加法、乘法、求逆都有封闭定义，适合字节级或 word 级 SIMD 优化。Ceph、HDFS、ISA-L、Jerasure 等实现都围绕这类编码和硬件加速展开。</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Reed-Solomon 编码和解码模型</div>
+                    <svg viewBox="0 0 900 430" role="img" aria-label="Reed-Solomon 编码和解码过程">
+                        <defs>
+                            <marker id="rs-arrow-zh" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#111111"></path>
+                            </marker>
+                        </defs>
+                        <rect x="60" y="72" width="190" height="246" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="155" y="108" text-anchor="middle" font-family="Arial" font-size="16" fill="#111111">Data Vector</text>
+                        <g font-family="Arial" font-size="13" text-anchor="middle" fill="#111111">
+                            <rect x="102" y="132" width="106" height="34" rx="4" fill="#E5E7EB"></rect><text x="155" y="154">D1</text>
+                            <rect x="102" y="176" width="106" height="34" rx="4" fill="#E5E7EB"></rect><text x="155" y="198">D2</text>
+                            <rect x="102" y="220" width="106" height="34" rx="4" fill="#E5E7EB"></rect><text x="155" y="242">...</text>
+                            <rect x="102" y="264" width="106" height="34" rx="4" fill="#E5E7EB"></rect><text x="155" y="286">Dk</text>
+                        </g>
+                        <rect x="350" y="72" width="200" height="246" rx="8" fill="#F7F7F8" stroke="#D1D5DB"></rect>
+                        <text x="450" y="108" text-anchor="middle" font-family="Arial" font-size="16" fill="#111111">Generator Matrix</text>
+                        <text x="450" y="158" text-anchor="middle" font-family="Arial" font-size="34" fill="#6B6F76">G</text>
+                        <text x="450" y="204" text-anchor="middle" font-family="Arial" font-size="13" fill="#6B6F76">identity rows keep data</text>
+                        <text x="450" y="230" text-anchor="middle" font-family="Arial" font-size="13" fill="#6B6F76">parity rows mix data</text>
+                        <rect x="650" y="72" width="190" height="246" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="745" y="108" text-anchor="middle" font-family="Arial" font-size="16" fill="#111111">Encoded Blocks</text>
+                        <g font-family="Arial" font-size="13" text-anchor="middle" fill="#111111">
+                            <rect x="692" y="132" width="106" height="34" rx="4" fill="#E5E7EB"></rect><text x="745" y="154">D1..Dk</text>
+                            <rect x="692" y="186" width="106" height="34" rx="4" fill="#F7F7F8" stroke="#A1A1AA"></rect><text x="745" y="208">P1</text>
+                            <rect x="692" y="230" width="106" height="34" rx="4" fill="#F7F7F8" stroke="#A1A1AA"></rect><text x="745" y="252">...</text>
+                            <rect x="692" y="274" width="106" height="34" rx="4" fill="#F7F7F8" stroke="#A1A1AA"></rect><text x="745" y="296">Pm</text>
+                        </g>
+                        <path d="M250 195 H340" stroke="#111111" stroke-width="2" marker-end="url(#rs-arrow-zh)"></path>
+                        <path d="M550 195 H640" stroke="#111111" stroke-width="2" marker-end="url(#rs-arrow-zh)"></path>
+                        <text x="450" y="372" text-anchor="middle" font-family="Arial" font-size="14" fill="#333333">decode: select any k surviving rows, invert the matrix, reconstruct missing data</text>
+                    </svg>
+                </div>
+
+                <p>Reed-Solomon 的优势是 MDS 特性。对 <code>RS(k,m)</code> 来说，任意丢失不超过 <code>m</code> 个块都能恢复，这给可靠性建模带来非常清晰的边界。它的弱点是修复一个小块通常要读取 <code>k</code> 个块，这会放大网络和磁盘 IO。</p>
+
+                <h2>3. 工程实现里的核心难点</h2>
+                <p>EC 在论文里看起来像矩阵运算，在生产系统里则是跨节点的读写协议。一个对象或 stripe 往往横跨多个磁盘、主机、机架甚至可用区；编码选择会影响正常读写、降级读、后台恢复和容量均衡。</p>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table fit-table">
+                        <thead>
+                            <tr>
+                                <th>难点</th>
+                                <th>原因</th>
+                                <th>常见工程处理</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>小对象</td>
+                                <td>对象小于 stripe 时，直接 EC 会产生 padding、元数据和随机写放大。</td>
+                                <td>小对象走副本、日志聚合或 pack，再在后台转 EC。</td>
+                            </tr>
+                            <tr>
+                                <td>覆盖写</td>
+                                <td>改一个数据块会影响校验块，read-modify-write 成本高。</td>
+                                <td>采用 append-only、版本化对象、后台合并或全 stripe 写。</td>
+                            </tr>
+                            <tr>
+                                <td>降级读</td>
+                                <td>块不可用时，要读多个幸存块并解码，尾延迟容易升高。</td>
+                                <td>热点数据保留副本，EC 用于冷数据或温数据。</td>
+                            </tr>
+                            <tr>
+                                <td>修复带宽</td>
+                                <td>RS 修一个块常要读取 k 个块，集群故障时容易挤占前台 IO。</td>
+                                <td>使用 LRC、分层 EC、限速修复和机架感知调度。</td>
+                            </tr>
+                            <tr>
+                                <td>放置策略</td>
+                                <td>同一 stripe 的块必须避开相关故障域。</td>
+                                <td>按磁盘、主机、机架、AZ 设置 failure domain。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">EC 写入、读取和修复路径</div>
+                    <svg viewBox="0 0 900 500" role="img" aria-label="EC 系统的写入读取和修复路径">
+                        <defs>
+                            <marker id="path-arrow-zh" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#111111"></path>
+                            </marker>
+                        </defs>
+                        <rect x="70" y="58" width="180" height="82" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="160" y="92" text-anchor="middle" font-family="Arial" font-size="15" fill="#111111">Object / File</text>
+                        <text x="160" y="118" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6F76">split into stripes</text>
+                        <rect x="350" y="58" width="200" height="82" rx="8" fill="#F7F7F8" stroke="#D1D5DB"></rect>
+                        <text x="450" y="92" text-anchor="middle" font-family="Arial" font-size="15" fill="#111111">EC Encoder</text>
+                        <text x="450" y="118" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6F76">data + parity chunks</text>
+                        <rect x="650" y="58" width="180" height="82" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="740" y="92" text-anchor="middle" font-family="Arial" font-size="15" fill="#111111">Placement</text>
+                        <text x="740" y="118" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6F76">different failure domains</text>
+                        <path d="M250 99 H340" stroke="#111111" stroke-width="2" marker-end="url(#path-arrow-zh)"></path>
+                        <path d="M550 99 H640" stroke="#111111" stroke-width="2" marker-end="url(#path-arrow-zh)"></path>
+
+                        <rect x="80" y="230" width="118" height="58" rx="6" fill="#E5E7EB" stroke="#A1A1AA"></rect>
+                        <text x="139" y="265" text-anchor="middle" font-family="Arial" font-size="13" fill="#111111">D1</text>
+                        <rect x="220" y="230" width="118" height="58" rx="6" fill="#E5E7EB" stroke="#A1A1AA"></rect>
+                        <text x="279" y="265" text-anchor="middle" font-family="Arial" font-size="13" fill="#111111">D2</text>
+                        <rect x="360" y="230" width="118" height="58" rx="6" fill="#E5E7EB" stroke="#A1A1AA"></rect>
+                        <text x="419" y="265" text-anchor="middle" font-family="Arial" font-size="13" fill="#111111">D3</text>
+                        <rect x="500" y="230" width="118" height="58" rx="6" fill="#F7F7F8" stroke="#71717A"></rect>
+                        <text x="559" y="265" text-anchor="middle" font-family="Arial" font-size="13" fill="#111111">P1</text>
+                        <rect x="640" y="230" width="118" height="58" rx="6" fill="#F7F7F8" stroke="#71717A"></rect>
+                        <text x="699" y="265" text-anchor="middle" font-family="Arial" font-size="13" fill="#111111">P2</text>
+
+                        <rect x="80" y="364" width="250" height="68" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="205" y="393" text-anchor="middle" font-family="Arial" font-size="14" fill="#111111">Normal read</text>
+                        <text x="205" y="416" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6F76">read the needed data chunks</text>
+                        <rect x="390" y="364" width="350" height="68" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="565" y="393" text-anchor="middle" font-family="Arial" font-size="14" fill="#111111">Degraded read / repair</text>
+                        <text x="565" y="416" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6F76">read surviving chunks, decode missing chunks</text>
+                        <path d="M419 288 C430 326, 286 338, 220 358" fill="none" stroke="#111111" stroke-width="2" marker-end="url(#path-arrow-zh)"></path>
+                        <path d="M559 288 C570 326, 568 338, 565 354" fill="none" stroke="#111111" stroke-width="2" marker-end="url(#path-arrow-zh)"></path>
+                    </svg>
+                </div>
+
+                <h2>4. 主流 EC 架构方案</h2>
+                <p>业内方案大体可以分成四类：传统 Reed-Solomon、带本地校验的 LRC、层级或跨地域 EC，以及副本到 EC 的生命周期转换。它们不是互斥关系，真实系统通常会按数据温度、对象大小和故障域组合使用。</p>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table fit-table">
+                        <thead>
+                            <tr>
+                                <th>方案</th>
+                                <th>代表系统</th>
+                                <th>优势</th>
+                                <th>代价</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>RS / MDS EC</td>
+                                <td>Ceph、MinIO、HDFS EC、对象存储后端。</td>
+                                <td>可靠性边界清晰，空间效率高，生态成熟。</td>
+                                <td>单块修复读放大高，降级读尾延迟明显。</td>
+                            </tr>
+                            <tr>
+                                <td>LRC</td>
+                                <td>Azure Storage LRC、Xorbas、部分云存储内部实现。</td>
+                                <td>常见单块故障只读本地 group，修复带宽更低。</td>
+                                <td>额外本地校验增加空间开销，编码布局更复杂。</td>
+                            </tr>
+                            <tr>
+                                <td>分层 EC</td>
+                                <td>跨机架、跨 AZ、跨 region 的云存储布局。</td>
+                                <td>把机架故障和区域故障分层处理，恢复路径更可控。</td>
+                                <td>放置、调度、容量均衡和故障建模更复杂。</td>
+                            </tr>
+                            <tr>
+                                <td>副本转 EC</td>
+                                <td>Facebook f4、HDFS-RAID、冷数据对象存储。</td>
+                                <td>热写阶段低延迟，冷却后节省容量。</td>
+                                <td>需要后台迁移、校验、索引和生命周期管理。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">LRC 通过本地校验降低单块修复成本</div>
+                    <svg viewBox="0 0 900 430" role="img" aria-label="LRC 本地校验和全局校验结构">
+                        <defs>
+                            <marker id="lrc-arrow-zh" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#111111"></path>
+                            </marker>
+                        </defs>
+                        <rect x="70" y="68" width="340" height="178" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="240" y="104" text-anchor="middle" font-family="Arial" font-size="15" fill="#111111">Local group A</text>
+                        <g font-family="Arial" font-size="12" text-anchor="middle">
+                            <rect x="104" y="132" width="54" height="42" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="131" y="158" fill="#111111">D1</text>
+                            <rect x="170" y="132" width="54" height="42" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="197" y="158" fill="#111111">D2</text>
+                            <rect x="236" y="132" width="54" height="42" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="263" y="158" fill="#111111">D3</text>
+                            <rect x="302" y="132" width="54" height="42" rx="5" fill="#F7F7F8" stroke="#71717A"></rect><text x="329" y="158" fill="#111111">L1</text>
+                        </g>
+                        <text x="240" y="214" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6F76">repair D2 by reading D1, D3, L1</text>
+
+                        <rect x="490" y="68" width="340" height="178" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="660" y="104" text-anchor="middle" font-family="Arial" font-size="15" fill="#111111">Local group B</text>
+                        <g font-family="Arial" font-size="12" text-anchor="middle">
+                            <rect x="524" y="132" width="54" height="42" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="551" y="158" fill="#111111">D4</text>
+                            <rect x="590" y="132" width="54" height="42" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="617" y="158" fill="#111111">D5</text>
+                            <rect x="656" y="132" width="54" height="42" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="683" y="158" fill="#111111">D6</text>
+                            <rect x="722" y="132" width="54" height="42" rx="5" fill="#F7F7F8" stroke="#71717A"></rect><text x="749" y="158" fill="#111111">L2</text>
+                        </g>
+                        <text x="660" y="214" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6F76">most single failures stay local</text>
+
+                        <rect x="280" y="310" width="340" height="66" rx="8" fill="#F7F7F8" stroke="#71717A"></rect>
+                        <text x="450" y="338" text-anchor="middle" font-family="Arial" font-size="15" fill="#111111">Global parity P1 / P2</text>
+                        <text x="450" y="360" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6F76">keeps tolerance for wider failure combinations</text>
+                        <path d="M240 246 C270 292, 342 292, 374 304" fill="none" stroke="#111111" stroke-width="2" marker-end="url(#lrc-arrow-zh)"></path>
+                        <path d="M660 246 C630 292, 558 292, 526 304" fill="none" stroke="#111111" stroke-width="2" marker-end="url(#lrc-arrow-zh)"></path>
+                    </svg>
+                </div>
+
+                <p>LRC 的关键洞察是：生产里最常见的是单盘、单节点、单块故障，不必每次都动用完整的 RS 解码。通过增加本地校验块，系统可以用更少幸存块完成大多数修复，同时保留全局校验应对更大范围故障。Azure Storage 和 Xorbas 相关论文都围绕这个方向展开。</p>
+
+                <h2>5. 论文和开源系统给出的取舍</h2>
+                <p>Azure Storage 论文展示了强一致云存储如何同时使用三副本、EC 和地理复制。它在单 region 内使用 LRC 来降低修复带宽，同时保留跨故障域的数据耐久性。这个方向后来成为许多云存储 EC 设计的重要参考。</p>
+                <p>Facebook f4 论文强调生命周期转换：热数据先在 Haystack 里保留副本，等访问温度下降后迁移到 f4，用 EC 降低冷数据成本。这个实践说明 EC 不一定要出现在每一次前台写入路径上，后台转码也可以是非常有效的架构选择。</p>
+                <p>HDFS-RAID 和后来的 HDFS Erasure Coding 则代表了大数据文件系统路径。它们关注大文件、顺序读写、块级修复和 NameNode 元数据扩展。与对象存储相比，HDFS 更容易通过大 block 和批量任务摊薄 EC 成本。</p>
+                <p>Ceph 和 MinIO 更接近通用对象存储产品化形态。Ceph 通过 erasure-code profile、failure domain 和 CRUSH 放置规则让用户选择编码插件与故障域；MinIO 则以对象级 EC 和 parity set 简化部署模型，强调在标准硬件上的容量效率和容错。</p>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table fit-table">
+                        <thead>
+                            <tr>
+                                <th>系统 / 论文</th>
+                                <th>核心方案</th>
+                                <th>可借鉴点</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Azure Storage / LRC</td>
+                                <td>本地校验 + 全局校验，降低常见修复的网络开销。</td>
+                                <td>把恢复带宽作为一等设计目标，而不只看空间开销。</td>
+                            </tr>
+                            <tr>
+                                <td>Xorbas</td>
+                                <td>使用 locally repairable codes 改善云存储单块修复。</td>
+                                <td>在 MDS 最优空间效率之外，为修复性能引入新的优化维度。</td>
+                            </tr>
+                            <tr>
+                                <td>Facebook f4</td>
+                                <td>热数据副本，温冷数据迁移到 EC blob store。</td>
+                                <td>用生命周期管理把延迟敏感路径和容量优化路径分开。</td>
+                            </tr>
+                            <tr>
+                                <td>HDFS-RAID / HDFS EC</td>
+                                <td>对大文件和 block group 做 EC，适合批量数据场景。</td>
+                                <td>大 block、批处理和后台修复能显著降低 EC 管理成本。</td>
+                            </tr>
+                            <tr>
+                                <td>Ceph / MinIO</td>
+                                <td>面向对象存储的 EC profile、parity set 和故障域放置。</td>
+                                <td>产品化系统必须暴露足够清晰的编码参数和恢复策略。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>对 KyteStore 这类系统的启发</h3>
+                <ul>
+                    <li><strong>不要只比较空间开销。</strong>EC 方案还必须比较修复读放大、降级读延迟、后台恢复对前台流量的影响。</li>
+                    <li><strong>数据温度要参与决策。</strong>热数据可以保留副本或缓存，温冷数据再转 EC，避免把编码成本放到最敏感路径。</li>
+                    <li><strong>故障域必须进入编码布局。</strong>一个 stripe 的块不能集中在同一主机、机架或 AZ，否则数学可靠性会被相关故障抵消。</li>
+                    <li><strong>小对象需要单独策略。</strong>直接 EC 小对象通常不划算，应考虑 pack、日志聚合、阈值转换或副本保护。</li>
+                    <li><strong>恢复调度和验证同样关键。</strong>EC 不只是编码库，还包括 scrub、repair、限速、校验、重平衡和故障演练。</li>
+                </ul>
+
+                <h3>参考资料</h3>
+                <ul class="reference-list">
+                    <li><a href="https://www.microsoft.com/en-us/research/publication/windows-azure-storage-a-highly-available-cloud-storage-service-with-strong-consistency/" target="_blank" rel="noopener">Windows Azure Storage: A Highly Available Cloud Storage Service with Strong Consistency</a>：介绍 Azure Storage 的分层架构、强一致和 LRC 使用背景。</li>
+                    <li><a href="https://www.microsoft.com/en-us/research/publication/erasure-coding-in-windows-azure-storage/" target="_blank" rel="noopener">Erasure Coding in Windows Azure Storage</a>：讨论 Azure Storage 中 LRC 的可靠性与修复成本取舍。</li>
+                    <li><a href="https://www.usenix.org/conference/nsdi12/technical-sessions/presentation/sathiamoorthy" target="_blank" rel="noopener">Xorbas: Locally Repairable Codes for Cloud Storage</a>：系统阐述本地可修复码如何降低云存储修复带宽。</li>
+                    <li><a href="https://www.usenix.org/conference/osdi14/technical-sessions/presentation/muralidhar" target="_blank" rel="noopener">f4: Facebook's Warm BLOB Storage System</a>：介绍 Facebook 如何用 EC 支撑温数据 blob 存储。</li>
+                    <li><a href="https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HDFSErasureCoding.html" target="_blank" rel="noopener">Apache HDFS Erasure Coding</a>：HDFS 官方 EC 文档，覆盖 block group、codec 和部署约束。</li>
+                    <li><a href="https://docs.ceph.com/en/latest/rados/operations/erasure-code/" target="_blank" rel="noopener">Ceph Erasure Code</a>：Ceph 官方文档，说明 erasure-code profile、plugin 和 failure domain。</li>
+                    <li><a href="https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html" target="_blank" rel="noopener">MinIO Erasure Coding</a>：MinIO 官方文档，解释对象级 EC、parity 和恢复模型。</li>
+                </ul>
+
+                <p class="post-footnote">本文聚焦 EC 架构和工程取舍。具体编码库、SIMD 优化、可靠性计算和 KyteStore 的落地设计可在后续文章中继续展开。</p>
+            </article>
+
+            <article class="article" data-lang-block="en" hidden>
+                <a class="breadcrumb" href="../blog.html">Back to Blog</a>
+                <div class="meta">Storage Architecture · 2026-06-22</div>
+                <h1>Erasure Coding Basics And Mainstream Architectures</h1>
+                <p class="generated-note">Generated with a large language model from public papers, engineering documents, and common storage-system practice.</p>
+
+                <p class="lead">Erasure Coding, or EC, is one of the core techniques cloud storage systems use to reduce replica cost. It splits data into data chunks, computes parity chunks, and can reconstruct the original data as long as the number of lost chunks stays within the configured tolerance.</p>
+
+                <div class="toc-box">
+                    <strong>Outline</strong>
+                    <ol>
+                        <li>What problem EC solves</li>
+                        <li>How Reed-Solomon works</li>
+                        <li>Engineering challenges</li>
+                        <li>Mainstream EC architectures</li>
+                        <li>Lessons from papers and production systems</li>
+                    </ol>
+                </div>
+
+                <h2>1. What Problem EC Solves</h2>
+                <p>The easiest protection model is replication. Three replicas keep three full copies and can survive one or two copy losses, but the storage overhead is 3x. EC aims to keep durability high while reducing the overhead to roughly 1.2x to 1.6x for many cold or warm storage workloads.</p>
+                <p>With <code>RS(6,3)</code>, a system splits an object into six data chunks and computes three parity chunks. Any three chunks may be lost while the object remains recoverable. The storage overhead is <code>(6+3)/6 = 1.5x</code>, far below triple replication.</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Replication Versus EC Space Overhead</div>
+                    <svg viewBox="0 0 900 360" role="img" aria-label="Space overhead comparison between replication and erasure coding">
+                        <rect x="70" y="72" width="300" height="78" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="220" y="104" text-anchor="middle" font-family="Arial" font-size="16" fill="#111111">Three replicas</text>
+                        <text x="220" y="132" text-anchor="middle" font-family="Arial" font-size="13" fill="#6B6F76">A + A + A = 3.0x</text>
+                        <rect x="70" y="180" width="80" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect>
+                        <rect x="180" y="180" width="80" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect>
+                        <rect x="290" y="180" width="80" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect>
+                        <text x="110" y="208" text-anchor="middle" font-family="Arial" font-size="13" fill="#111111">Replica</text>
+                        <text x="220" y="208" text-anchor="middle" font-family="Arial" font-size="13" fill="#111111">Replica</text>
+                        <text x="330" y="208" text-anchor="middle" font-family="Arial" font-size="13" fill="#111111">Replica</text>
+
+                        <rect x="510" y="72" width="320" height="78" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="670" y="104" text-anchor="middle" font-family="Arial" font-size="16" fill="#111111">RS(6,3)</text>
+                        <text x="670" y="132" text-anchor="middle" font-family="Arial" font-size="13" fill="#6B6F76">6 data + 3 parity = 1.5x</text>
+                        <g font-family="Arial" font-size="12" text-anchor="middle">
+                            <rect x="506" y="180" width="48" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="530" y="208" fill="#111111">D1</text>
+                            <rect x="562" y="180" width="48" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="586" y="208" fill="#111111">D2</text>
+                            <rect x="618" y="180" width="48" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="642" y="208" fill="#111111">D3</text>
+                            <rect x="674" y="180" width="48" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="698" y="208" fill="#111111">D4</text>
+                            <rect x="730" y="180" width="48" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="754" y="208" fill="#111111">D5</text>
+                            <rect x="786" y="180" width="48" height="46" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="810" y="208" fill="#111111">D6</text>
+                            <rect x="590" y="248" width="48" height="46" rx="5" fill="#F7F7F8" stroke="#71717A"></rect><text x="614" y="276" fill="#111111">P1</text>
+                            <rect x="646" y="248" width="48" height="46" rx="5" fill="#F7F7F8" stroke="#71717A"></rect><text x="670" y="276" fill="#111111">P2</text>
+                            <rect x="702" y="248" width="48" height="46" rx="5" fill="#F7F7F8" stroke="#71717A"></rect><text x="726" y="276" fill="#111111">P3</text>
+                        </g>
+                    </svg>
+                </div>
+
+                <p>The tradeoff is real. Writes need encoding, repair reads multiple chunks, overwrites may require parity updates, and small objects need packing or padding. EC is a cost shift across capacity, durability, repair bandwidth, and latency.</p>
+
+                <h2>2. How Reed-Solomon Works</h2>
+                <p>Reed-Solomon is the classic EC family used in storage systems. Conceptually it is linear coding: data chunks form a vector, a generator matrix multiplies that vector, and the result contains both data and parity chunks. During recovery, any sufficient set of surviving rows can be inverted to reconstruct the original data.</p>
+                <p>Production implementations usually operate over finite fields such as GF(2^8) or GF(2^16). Finite-field arithmetic gives closed addition, multiplication, and inversion rules that map well to byte-oriented and SIMD-accelerated implementations.</p>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">Reed-Solomon Encoding And Decoding Model</div>
+                    <svg viewBox="0 0 900 430" role="img" aria-label="Reed-Solomon encoding and decoding model">
+                        <defs>
+                            <marker id="rs-arrow-en" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#111111"></path>
+                            </marker>
+                        </defs>
+                        <rect x="60" y="72" width="190" height="246" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="155" y="108" text-anchor="middle" font-family="Arial" font-size="16" fill="#111111">Data Vector</text>
+                        <g font-family="Arial" font-size="13" text-anchor="middle" fill="#111111">
+                            <rect x="102" y="132" width="106" height="34" rx="4" fill="#E5E7EB"></rect><text x="155" y="154">D1</text>
+                            <rect x="102" y="176" width="106" height="34" rx="4" fill="#E5E7EB"></rect><text x="155" y="198">D2</text>
+                            <rect x="102" y="220" width="106" height="34" rx="4" fill="#E5E7EB"></rect><text x="155" y="242">...</text>
+                            <rect x="102" y="264" width="106" height="34" rx="4" fill="#E5E7EB"></rect><text x="155" y="286">Dk</text>
+                        </g>
+                        <rect x="350" y="72" width="200" height="246" rx="8" fill="#F7F7F8" stroke="#D1D5DB"></rect>
+                        <text x="450" y="108" text-anchor="middle" font-family="Arial" font-size="16" fill="#111111">Generator Matrix</text>
+                        <text x="450" y="158" text-anchor="middle" font-family="Arial" font-size="34" fill="#6B6F76">G</text>
+                        <text x="450" y="204" text-anchor="middle" font-family="Arial" font-size="13" fill="#6B6F76">identity rows keep data</text>
+                        <text x="450" y="230" text-anchor="middle" font-family="Arial" font-size="13" fill="#6B6F76">parity rows mix data</text>
+                        <rect x="650" y="72" width="190" height="246" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="745" y="108" text-anchor="middle" font-family="Arial" font-size="16" fill="#111111">Encoded Blocks</text>
+                        <g font-family="Arial" font-size="13" text-anchor="middle" fill="#111111">
+                            <rect x="692" y="132" width="106" height="34" rx="4" fill="#E5E7EB"></rect><text x="745" y="154">D1..Dk</text>
+                            <rect x="692" y="186" width="106" height="34" rx="4" fill="#F7F7F8" stroke="#A1A1AA"></rect><text x="745" y="208">P1</text>
+                            <rect x="692" y="230" width="106" height="34" rx="4" fill="#F7F7F8" stroke="#A1A1AA"></rect><text x="745" y="252">...</text>
+                            <rect x="692" y="274" width="106" height="34" rx="4" fill="#F7F7F8" stroke="#A1A1AA"></rect><text x="745" y="296">Pm</text>
+                        </g>
+                        <path d="M250 195 H340" stroke="#111111" stroke-width="2" marker-end="url(#rs-arrow-en)"></path>
+                        <path d="M550 195 H640" stroke="#111111" stroke-width="2" marker-end="url(#rs-arrow-en)"></path>
+                        <text x="450" y="372" text-anchor="middle" font-family="Arial" font-size="14" fill="#333333">decode: select any k surviving rows, invert the matrix, reconstruct missing data</text>
+                    </svg>
+                </div>
+
+                <p>The strength of Reed-Solomon is the MDS property. For <code>RS(k,m)</code>, any loss of up to <code>m</code> chunks is recoverable. Its weakness is repair cost: rebuilding one missing chunk usually requires reading <code>k</code> surviving chunks.</p>
+
+                <h2>3. Engineering Challenges</h2>
+                <p>In papers, EC looks like matrix math. In production, it is a distributed read-write protocol. One object or stripe may span many disks, hosts, racks, or availability zones. The code choice affects normal reads, degraded reads, background repair, and capacity balancing.</p>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table fit-table">
+                        <thead>
+                            <tr>
+                                <th>Challenge</th>
+                                <th>Why It Matters</th>
+                                <th>Common Handling</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Small objects</td>
+                                <td>Direct EC creates padding, metadata overhead, and random-write amplification.</td>
+                                <td>Use replicas, logging, packing, or background conversion.</td>
+                            </tr>
+                            <tr>
+                                <td>Overwrites</td>
+                                <td>Changing one data chunk can force parity updates.</td>
+                                <td>Prefer append-only layouts, object versions, merge jobs, or full-stripe writes.</td>
+                            </tr>
+                            <tr>
+                                <td>Degraded reads</td>
+                                <td>Unavailable chunks require reads from multiple survivors plus decoding.</td>
+                                <td>Keep hot data replicated or cached; use EC mainly for warm and cold data.</td>
+                            </tr>
+                            <tr>
+                                <td>Repair bandwidth</td>
+                                <td>RS repair can consume large cluster bandwidth during failures.</td>
+                                <td>Use LRC, hierarchical EC, throttled repair, and failure-domain-aware placement.</td>
+                            </tr>
+                            <tr>
+                                <td>Placement</td>
+                                <td>Chunks in one stripe must avoid correlated failure domains.</td>
+                                <td>Place across disks, hosts, racks, or availability zones.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h2>4. Mainstream EC Architectures</h2>
+                <p>Mainstream designs fall into four families: conventional Reed-Solomon, locally repairable codes, hierarchical or geo-aware EC, and lifecycle conversion from replicas to EC. Real systems often combine them based on data temperature, object size, and failure domain.</p>
+
+                <div class="table-wrap">
+                    <table class="benchmark-table fit-table">
+                        <thead>
+                            <tr>
+                                <th>Design</th>
+                                <th>Representative Systems</th>
+                                <th>Strength</th>
+                                <th>Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>RS / MDS EC</td>
+                                <td>Ceph, MinIO, HDFS EC, object storage backends.</td>
+                                <td>Clear durability boundary and mature ecosystem.</td>
+                                <td>High single-chunk repair fan-in and degraded-read tail latency.</td>
+                            </tr>
+                            <tr>
+                                <td>LRC</td>
+                                <td>Azure Storage LRC, Xorbas, internal cloud storage designs.</td>
+                                <td>Common single failures repair from a local group.</td>
+                                <td>Extra local parity increases storage overhead and layout complexity.</td>
+                            </tr>
+                            <tr>
+                                <td>Hierarchical EC</td>
+                                <td>Cross-rack, cross-AZ, and cross-region cloud layouts.</td>
+                                <td>Separates local and wide-area failure handling.</td>
+                                <td>More complex placement, scheduling, and reliability modeling.</td>
+                            </tr>
+                            <tr>
+                                <td>Replica-to-EC</td>
+                                <td>Facebook f4, HDFS-RAID, cold object stores.</td>
+                                <td>Low-latency hot writes, capacity savings after cooling.</td>
+                                <td>Needs background migration, verification, indexing, and lifecycle control.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="diagram-card">
+                    <div class="diagram-title">LRC Reduces Common Single-Chunk Repair Cost</div>
+                    <svg viewBox="0 0 900 430" role="img" aria-label="Local and global parity in locally repairable codes">
+                        <defs>
+                            <marker id="lrc-arrow-en" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#111111"></path>
+                            </marker>
+                        </defs>
+                        <rect x="70" y="68" width="340" height="178" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="240" y="104" text-anchor="middle" font-family="Arial" font-size="15" fill="#111111">Local group A</text>
+                        <g font-family="Arial" font-size="12" text-anchor="middle">
+                            <rect x="104" y="132" width="54" height="42" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="131" y="158" fill="#111111">D1</text>
+                            <rect x="170" y="132" width="54" height="42" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="197" y="158" fill="#111111">D2</text>
+                            <rect x="236" y="132" width="54" height="42" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="263" y="158" fill="#111111">D3</text>
+                            <rect x="302" y="132" width="54" height="42" rx="5" fill="#F7F7F8" stroke="#71717A"></rect><text x="329" y="158" fill="#111111">L1</text>
+                        </g>
+                        <text x="240" y="214" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6F76">repair D2 by reading D1, D3, L1</text>
+                        <rect x="490" y="68" width="340" height="178" rx="8" fill="#FFFFFF" stroke="#D1D5DB"></rect>
+                        <text x="660" y="104" text-anchor="middle" font-family="Arial" font-size="15" fill="#111111">Local group B</text>
+                        <g font-family="Arial" font-size="12" text-anchor="middle">
+                            <rect x="524" y="132" width="54" height="42" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="551" y="158" fill="#111111">D4</text>
+                            <rect x="590" y="132" width="54" height="42" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="617" y="158" fill="#111111">D5</text>
+                            <rect x="656" y="132" width="54" height="42" rx="5" fill="#E5E7EB" stroke="#A1A1AA"></rect><text x="683" y="158" fill="#111111">D6</text>
+                            <rect x="722" y="132" width="54" height="42" rx="5" fill="#F7F7F8" stroke="#71717A"></rect><text x="749" y="158" fill="#111111">L2</text>
+                        </g>
+                        <text x="660" y="214" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6F76">most single failures stay local</text>
+                        <rect x="280" y="310" width="340" height="66" rx="8" fill="#F7F7F8" stroke="#71717A"></rect>
+                        <text x="450" y="338" text-anchor="middle" font-family="Arial" font-size="15" fill="#111111">Global parity P1 / P2</text>
+                        <text x="450" y="360" text-anchor="middle" font-family="Arial" font-size="12" fill="#6B6F76">keeps tolerance for wider failure combinations</text>
+                        <path d="M240 246 C270 292, 342 292, 374 304" fill="none" stroke="#111111" stroke-width="2" marker-end="url(#lrc-arrow-en)"></path>
+                        <path d="M660 246 C630 292, 558 292, 526 304" fill="none" stroke="#111111" stroke-width="2" marker-end="url(#lrc-arrow-en)"></path>
+                    </svg>
+                </div>
+
+                <p>The key LRC insight is that the most common production failures are single disks, hosts, or chunks. A system does not need full RS decoding for every repair. Extra local parity lets most repairs read fewer chunks while global parity keeps protection for broader failure combinations.</p>
+
+                <h2>5. Lessons From Papers And Production Systems</h2>
+                <p>The Azure Storage papers show how a strongly consistent cloud storage system can combine replication, EC, and geo-replication. Their LRC design treats repair bandwidth as a first-class metric, not a secondary implementation detail.</p>
+                <p>The Facebook f4 paper emphasizes lifecycle conversion. Hot data remains replicated in Haystack, then moves to f4 with EC after it cools. This shows that EC does not have to sit on the most latency-sensitive foreground write path.</p>
+                <p>HDFS-RAID and HDFS Erasure Coding represent the large-file analytics path. Large blocks, batch jobs, and background reconstruction make EC easier to amortize than in small-object workloads.</p>
+                <p>Ceph and MinIO represent productized object storage. Ceph exposes erasure-code profiles, plugins, and CRUSH failure domains. MinIO simplifies the model with object-level EC and parity sets for commodity hardware deployments.</p>
+
+                <h3>Implications For Systems Like KyteStore</h3>
+                <ul>
+                    <li><strong>Do not compare space overhead alone.</strong>Repair fan-in, degraded-read latency, and repair impact on foreground traffic matter just as much.</li>
+                    <li><strong>Data temperature should drive placement.</strong>Hot data can stay replicated or cached, while warm and cold data can move to EC.</li>
+                    <li><strong>Failure domains must shape stripe layout.</strong>Mathematical durability is weakened if correlated failures can remove too many chunks at once.</li>
+                    <li><strong>Small objects need a separate strategy.</strong>Packing, logging, threshold conversion, or replicas are often better than direct EC.</li>
+                    <li><strong>Repair scheduling is part of the EC system.</strong>Scrub, repair, throttling, verification, rebalancing, and fault drills are not optional extras.</li>
+                </ul>
+
+                <h3>References</h3>
+                <ul class="reference-list">
+                    <li><a href="https://www.microsoft.com/en-us/research/publication/windows-azure-storage-a-highly-available-cloud-storage-service-with-strong-consistency/" target="_blank" rel="noopener">Windows Azure Storage: A Highly Available Cloud Storage Service with Strong Consistency</a>: Azure Storage architecture, consistency, replication, and LRC context.</li>
+                    <li><a href="https://www.microsoft.com/en-us/research/publication/erasure-coding-in-windows-azure-storage/" target="_blank" rel="noopener">Erasure Coding in Windows Azure Storage</a>: tradeoffs around LRC reliability and repair cost.</li>
+                    <li><a href="https://www.usenix.org/conference/nsdi12/technical-sessions/presentation/sathiamoorthy" target="_blank" rel="noopener">Xorbas: Locally Repairable Codes for Cloud Storage</a>: locally repairable codes for lower repair bandwidth.</li>
+                    <li><a href="https://www.usenix.org/conference/osdi14/technical-sessions/presentation/muralidhar" target="_blank" rel="noopener">f4: Facebook's Warm BLOB Storage System</a>: EC-backed warm blob storage at Facebook.</li>
+                    <li><a href="https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HDFSErasureCoding.html" target="_blank" rel="noopener">Apache HDFS Erasure Coding</a>: official HDFS EC documentation.</li>
+                    <li><a href="https://docs.ceph.com/en/latest/rados/operations/erasure-code/" target="_blank" rel="noopener">Ceph Erasure Code</a>: official Ceph EC profiles, plugins, and failure domains.</li>
+                    <li><a href="https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html" target="_blank" rel="noopener">MinIO Erasure Coding</a>: object-level EC, parity, and recovery model.</li>
+                </ul>
+
+                <p class="post-footnote">This article focuses on EC architecture and engineering tradeoffs. Codec internals, SIMD optimization, reliability math, and KyteStore-specific design can be expanded in follow-up articles.</p>
+            </article>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container" data-i18n="footer-p">&copy; 2024 KyteStore. 高性能对象与文件存储加速。北京集智创新科技有限公司。</div>
+    </footer>
+
+    <script>
+    (function () {
+        var T = {
+            en: {
+                'page-title': 'Erasure Coding Basics And Mainstream Architectures - KyteStore Blog',
+                'nav-home': 'HOME',
+                'nav-architecture': 'DESIGN',
+                'nav-performance': 'BENCHMARK',
+                'nav-docs': 'DOCS',
+                'nav-blog': 'BLOG',
+                'nav-contact': 'CONTACT',
+                'lang-toggle': '中',
+                'footer-p': '&copy; 2024 KyteStore. High-Performance Object and File Storage Acceleration. JiZhi Innovation Technology Limit.'
+            },
+            zh: {
+                'page-title': 'EC 的基本原理与主流实现方案 - KyteStore 博客',
+                'nav-home': '首页',
+                'nav-architecture': '架构',
+                'nav-performance': '性能',
+                'nav-docs': '文档',
+                'nav-blog': '博客',
+                'nav-contact': '联系我们',
+                'lang-toggle': 'EN',
+                'footer-p': '&copy; 2024 KyteStore. 高性能对象与文件存储加速。北京集智创新科技有限公司。'
+            }
+        };
+
+        var lang = localStorage.getItem('ks-lang') || 'zh';
+
+        function applyLang(l) {
+            var t = T[l];
+            document.querySelectorAll('[data-i18n]').forEach(function (el) {
+                var key = el.getAttribute('data-i18n');
+                if (t[key] !== undefined) {
+                    el.innerHTML = t[key];
+                }
+            });
+            document.querySelectorAll('[data-lang-block]').forEach(function (el) {
+                el.hidden = el.getAttribute('data-lang-block') !== l;
+            });
+            document.title = t['page-title'];
+            document.documentElement.setAttribute('lang', l === 'zh' ? 'zh-CN' : 'en');
+        }
+
+        var nav = document.getElementById('site-nav');
+        var navToggle = document.querySelector('.nav-toggle');
+        var navBackdrop = document.querySelector('.nav-backdrop');
+
+        window.closeNav = function () {
+            if (!nav) return;
+            nav.classList.remove('open');
+            document.body.classList.remove('nav-open');
+            if (navBackdrop) navBackdrop.classList.remove('open');
+            if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
+        };
+
+        window.toggleNav = function () {
+            if (!nav) return;
+            if (navToggle && window.getComputedStyle(navToggle).display === 'none') {
+                window.closeNav();
+                return;
+            }
+            var willOpen = !nav.classList.contains('open');
+            nav.classList.toggle('open', willOpen);
+            document.body.classList.toggle('nav-open', willOpen);
+            if (navBackdrop) navBackdrop.classList.toggle('open', willOpen);
+            if (navToggle) navToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        };
+
+        if (nav) {
+            nav.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', window.closeNav);
+            });
+        }
+
+        window.toggleLang = function () {
+            lang = lang === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('ks-lang', lang);
+            applyLang(lang);
+            window.closeNav();
+        };
+
+        applyLang(lang);
+    })();
+    </script>
+</body>
+</html>
