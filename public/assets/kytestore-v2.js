@@ -50,39 +50,34 @@
   });
 
   const ecWrite = document.querySelector(".ec-write");
-  const ecReplay = ecWrite.querySelector(".ec-replay");
+  const ecPlayback = ecWrite.querySelector(".ec-playback");
+  const ecPauseLabel = ecPlayback.querySelector(".ec-pause-label");
+  const ecPlayLabel = ecPlayback.querySelector(".ec-play-label");
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-  let ecFrame;
+  const canObserveEcWrite = "IntersectionObserver" in window;
+  let ecVisible = !canObserveEcWrite;
+  let ecManuallyPaused = false;
 
-  function playEcWrite() {
-    if (reducedMotion.matches) return;
-    cancelAnimationFrame(ecFrame);
-    ecWrite.classList.remove("is-writing");
-    ecFrame = requestAnimationFrame(() => {
-      ecFrame = requestAnimationFrame(() => ecWrite.classList.add("is-writing"));
-    });
+  function updateEcPlayback() {
+    ecWrite.classList.toggle("is-animated", !reducedMotion.matches);
+    ecWrite.classList.toggle("is-paused", !ecVisible || ecManuallyPaused);
+    ecPlayback.hidden = reducedMotion.matches;
+    ecPauseLabel.hidden = ecManuallyPaused;
+    ecPlayLabel.hidden = !ecManuallyPaused;
   }
 
-  function applyEcMotionPreference() {
-    ecReplay.hidden = reducedMotion.matches;
-    if (reducedMotion.matches) {
-      cancelAnimationFrame(ecFrame);
-      ecWrite.classList.remove("is-writing");
-    }
-  }
-
-  applyEcMotionPreference();
-  reducedMotion.addEventListener("change", applyEcMotionPreference);
-  ecReplay.addEventListener("click", playEcWrite);
-  if ("IntersectionObserver" in window) {
+  updateEcPlayback();
+  reducedMotion.addEventListener("change", updateEcPlayback);
+  ecPlayback.addEventListener("click", () => {
+    ecManuallyPaused = !ecManuallyPaused;
+    updateEcPlayback();
+  });
+  if (canObserveEcWrite) {
     const ecObserver = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      playEcWrite();
-      ecObserver.disconnect();
-    }, { threshold: 0.45 });
+      ecVisible = entry.isIntersecting;
+      updateEcPlayback();
+    });
     ecObserver.observe(ecWrite);
-  } else {
-    playEcWrite();
   }
 
   const tabList = document.querySelector(".tech-tabs");

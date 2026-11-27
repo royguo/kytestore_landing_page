@@ -18,8 +18,8 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="stylesheet" href="/assets/kytestore-v2.css?v=3">
-  <script src="/assets/kytestore-v2.js?v=2" defer></script>
+  <link rel="stylesheet" href="/assets/kytestore-v2.css?v=4">
+  <script src="/assets/kytestore-v2.js?v=3" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main" data-en="Skip to content">跳到正文</a>
@@ -59,41 +59,140 @@
         <div class="ec-header">
           <span class="ec-title" id="ec-title" data-en="Inline EC write">前台 EC 写入</span>
           <code class="ec-mode">EC AW · 4+2</code>
-          <button class="ec-replay" type="button" aria-label="重播 EC 写入动画" data-en-aria-label="Replay EC write animation" hidden>
-            <span data-en="Replay">重播</span>
+          <button class="ec-playback" type="button" aria-controls="ec-topology" hidden>
+            <span class="ec-pause-label" data-en="Pause">暂停</span>
+            <span class="ec-play-label" data-en="Play" hidden>播放</span>
           </button>
         </div>
-        <div class="ec-layout">
-          <div class="ec-stage ec-source">
-            <span class="ec-stage-title" data-en="Full stripe">完整条带</span>
-            <div class="ec-stripe">
-              <span>D1</span><span>D2</span><span>D3</span><span>D4</span>
+        <div class="ec-plot">
+          <div class="ec-pipeline">
+            <div class="ec-stage ec-source">
+              <span class="ec-stage-title" data-en="Full stripe">完整条带</span>
+              <div class="ec-stripe">
+                <span>D1</span><span>D2</span><span>D3</span><span>D4</span>
+              </div>
+            </div>
+            <span class="ec-wire ec-send" aria-hidden="true"></span>
+            <div class="ec-stage ec-encoder">
+              <span class="ec-stage-title">Blob SDK</span>
+              <span class="ec-stage-label" data-en="Encode parity">生成校验分片</span>
             </div>
           </div>
-          <span class="ec-wire ec-send" aria-hidden="true"></span>
-          <div class="ec-stage ec-encoder">
-            <span class="ec-stage-title">Blob SDK</span>
-            <span class="ec-stage-label" data-en="Encode parity">生成校验分片</span>
-          </div>
           <span class="ec-wire ec-feed" aria-hidden="true"></span>
-          <ol class="ec-targets" role="list" aria-label="并行写入的 ChunkServer" data-en-aria-label="Parallel writes to ChunkServers">
-            <li class="ec-target">
-              <span class="ec-wire ec-route" aria-hidden="true"></span><code class="ec-shard">D1</code><span class="ec-node">CS 01</span>
+          <ol class="ec-hosts" id="ec-topology" role="list" aria-label="六台服务器及其磁盘和 Chunk" data-en-aria-label="Six physical hosts with their disks and chunks">
+            <li class="ec-host">
+              <span class="ec-packet" aria-hidden="true"></span>
+              <span class="ec-stem" aria-hidden="true"></span>
+              <div class="ec-host-card">
+                <div class="ec-host-heading">
+                  <span data-en="Host 1">服务器 1</span><code class="ec-shard">D1</code>
+                </div>
+                <div class="ec-disks">
+                  <div class="ec-disk ec-disk-target">
+                    <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
+                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 2，写入目标" data-en-aria-label="Chunk 2, write target">2</span></div>
+                  </div>
+                  <div class="ec-disk">
+                    <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
+                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                  </div>
+                </div>
+              </div>
             </li>
-            <li class="ec-target">
-              <span class="ec-wire ec-route" aria-hidden="true"></span><code class="ec-shard">D2</code><span class="ec-node">CS 02</span>
+            <li class="ec-host">
+              <span class="ec-packet" aria-hidden="true"></span>
+              <span class="ec-stem" aria-hidden="true"></span>
+              <div class="ec-host-card">
+                <div class="ec-host-heading">
+                  <span data-en="Host 2">服务器 2</span><code class="ec-shard">D2</code>
+                </div>
+                <div class="ec-disks">
+                  <div class="ec-disk">
+                    <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
+                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                  </div>
+                  <div class="ec-disk ec-disk-target">
+                    <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
+                    <div class="ec-chunks"><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 1，写入目标" data-en-aria-label="Chunk 1, write target">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                  </div>
+                </div>
+              </div>
             </li>
-            <li class="ec-target">
-              <span class="ec-wire ec-route" aria-hidden="true"></span><code class="ec-shard">D3</code><span class="ec-node">CS 03</span>
+            <li class="ec-host">
+              <span class="ec-packet" aria-hidden="true"></span>
+              <span class="ec-stem" aria-hidden="true"></span>
+              <div class="ec-host-card">
+                <div class="ec-host-heading">
+                  <span data-en="Host 3">服务器 3</span><code class="ec-shard">D3</code>
+                </div>
+                <div class="ec-disks">
+                  <div class="ec-disk">
+                    <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
+                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                  </div>
+                  <div class="ec-disk ec-disk-target">
+                    <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
+                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 2，写入目标" data-en-aria-label="Chunk 2, write target">2</span></div>
+                  </div>
+                </div>
+              </div>
             </li>
-            <li class="ec-target">
-              <span class="ec-wire ec-route" aria-hidden="true"></span><code class="ec-shard">D4</code><span class="ec-node">CS 04</span>
+            <li class="ec-host">
+              <span class="ec-packet" aria-hidden="true"></span>
+              <span class="ec-stem" aria-hidden="true"></span>
+              <div class="ec-host-card">
+                <div class="ec-host-heading">
+                  <span data-en="Host 4">服务器 4</span><code class="ec-shard">D4</code>
+                </div>
+                <div class="ec-disks">
+                  <div class="ec-disk ec-disk-target">
+                    <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
+                    <div class="ec-chunks"><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 1，写入目标" data-en-aria-label="Chunk 1, write target">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                  </div>
+                  <div class="ec-disk">
+                    <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
+                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                  </div>
+                </div>
+              </div>
             </li>
-            <li class="ec-target ec-parity">
-              <span class="ec-wire ec-route" aria-hidden="true"></span><code class="ec-shard">P1</code><span class="ec-node">CS 05</span>
+            <li class="ec-host ec-parity">
+              <span class="ec-packet" aria-hidden="true"></span>
+              <span class="ec-stem" aria-hidden="true"></span>
+              <div class="ec-host-card">
+                <div class="ec-host-heading">
+                  <span data-en="Host 5">服务器 5</span><code class="ec-shard">P1</code>
+                </div>
+                <div class="ec-disks">
+                  <div class="ec-disk">
+                    <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
+                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                  </div>
+                  <div class="ec-disk ec-disk-target">
+                    <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
+                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 2，写入目标" data-en-aria-label="Chunk 2, write target">2</span></div>
+                  </div>
+                </div>
+              </div>
             </li>
-            <li class="ec-target ec-parity">
-              <span class="ec-wire ec-route" aria-hidden="true"></span><code class="ec-shard">P2</code><span class="ec-node">CS 06</span>
+            <li class="ec-host ec-parity">
+              <span class="ec-packet" aria-hidden="true"></span>
+              <span class="ec-stem" aria-hidden="true"></span>
+              <div class="ec-host-card">
+                <div class="ec-host-heading">
+                  <span data-en="Host 6">服务器 6</span><code class="ec-shard">P2</code>
+                </div>
+                <div class="ec-disks">
+                  <div class="ec-disk ec-disk-target">
+                    <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
+                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 2，写入目标" data-en-aria-label="Chunk 2, write target">2</span></div>
+                  </div>
+                  <div class="ec-disk">
+                    <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
+                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                  </div>
+                </div>
+              </div>
             </li>
           </ol>
         </div>
@@ -102,6 +201,7 @@
             <span class="ec-key" data-en="Data">数据分片</span>
             <span class="ec-key ec-parity" data-en="Parity">校验分片</span>
           </span>
+          <span class="ec-disk-key" data-en="One ChunkServer per disk · Cells are chunks">每盘一个 ChunkServer · 方格为 Chunk</span>
           <span class="ec-confirmed" data-en="6 ACKs → Append OK">6 次写入确认后返回</span>
         </figcaption>
       </figure>
