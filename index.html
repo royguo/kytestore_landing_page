@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f9f8f4">
   <title data-en="KyteStore 2.0 | Open Source Distributed Blob Storage System">KyteStore 2.0 · 开源分布式 Blob 存储系统</title>
-  <meta name="description" content="KyteStore 为数据库和湖仓提供分布式 Blob 存储，支持 C/C++ SDK、同步与异步读写、多副本和前台纠删码。" data-en-content="Distributed Blob storage for databases and lakehouses, with a C/C++ SDK, sync and async I/O, replication, and inline erasure coding.">
+  <meta name="description" content="KyteStore 为数据库、数仓、对象系统和文件系统提供分布式 Blob 存储，支持原生 C/C++ SDK、多副本和前台纠删码。" data-en-content="Distributed Blob storage for databases, warehouses, object stores, and file systems, with a native C/C++ SDK, replication, and inline erasure coding.">
   <link rel="canonical" href="https://kytestore.com/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="KyteStore">
   <meta property="og:title" content="KyteStore 2.0 · 开源分布式 Blob 存储系统" data-en-content="KyteStore 2.0 | Open Source Distributed Blob Storage System">
-  <meta property="og:description" content="用 C/C++ SDK 为数据库与湖仓接入分布式 Blob 存储。" data-en-content="Connect databases and lakehouses to distributed Blob storage through the C/C++ SDK.">
+  <meta property="og:description" content="分布式 Blob 存储底座，支持原生 C/C++ SDK 和非对齐 EC。" data-en-content="A distributed Blob storage layer with a native C/C++ SDK and unaligned erasure coding.">
   <meta property="og:url" content="https://kytestore.com/">
   <meta property="og:image" content="https://kytestore.com/assets/images/kytestore-v2-flow.webp">
   <meta name="twitter:card" content="summary_large_image">
@@ -18,8 +18,8 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="stylesheet" href="/assets/kytestore-v2.css?v=4">
-  <script src="/assets/kytestore-v2.js?v=3" defer></script>
+  <link rel="stylesheet" href="/assets/kytestore-v2.css?v=5">
+  <script src="/assets/kytestore-v2.js?v=4" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main" data-en="Skip to content">跳到正文</a>
@@ -28,323 +28,402 @@
     <div class="shell header-inner">
       <a class="wordmark" href="/" lang="en">KyteStore</a>
       <nav class="main-nav" aria-label="主导航" data-en-aria-label="Main navigation">
-        <a href="#sdk">SDK</a>
-        <a href="#use-cases" data-en="Use cases">接入场景</a>
-        <a href="#architecture" data-en="Technology">核心技术</a>
-        <a href="#features" data-en="Features">能力清单</a>
-        <a href="/blog" data-en="Blog">技术博客</a>
+        <a href="#overview" data-en="Overview">系统总览</a>
+        <a href="#features" data-en="Features">核心特性</a>
+        <a href="#sdk" data-en="Integration">接入方式</a>
+        <a href="#architecture" data-en="Technology">技术选型</a>
+        <a href="#source">GitHub</a>
       </nav>
       <div class="header-actions">
-        <a class="repo-link" href="https://github.com/royguo/kytestore2.0" target="_blank" rel="noopener noreferrer">
-          <span lang="en">GitHub</span>
-          <small data-en="Private">私有</small>
-        </a>
         <button class="lang-button" id="lang-toggle" type="button" lang="en" aria-label="Switch to English" hidden>EN</button>
       </div>
     </div>
   </header>
 
   <main class="shell" id="main">
-    <section class="hero" aria-labelledby="hero-title">
+    <section class="hero" id="overview" aria-labelledby="hero-title">
       <div class="hero-copy">
         <h1 id="hero-title" data-en="Open Source Distributed Blob Storage System">开源分布式 Blob 存储系统</h1>
-        <p data-en="A C/C++ SDK for databases and lakehouses. Append data and read it by offset directly from storage nodes.">面向数据库与湖仓，通过 C/C++ SDK 直连存储节点，支持追加写入和按偏移读取。</p>
+        <p data-en="A storage layer for databases, warehouses, object stores, and file systems, with a native C and C++ SDK.">通过原生 C、C++ SDK，为数据库、数仓、对象存储和文件系统提供分布式存储底座。</p>
         <div class="hero-actions">
-          <a class="primary-action" href="#sdk" data-en="See C++ examples">查看 C++ 示例</a>
-          <a class="text-action" href="#architecture" data-en="Explore the technology">查看核心技术</a>
+          <a class="primary-action" href="#sdk" data-en="See SDK examples">查看接入示例</a>
+          <a class="text-action" href="#features" data-en="Explore core features">查看核心特性</a>
         </div>
       </div>
 
-      <figure class="ec-write" aria-labelledby="ec-title" aria-describedby="ec-caption">
-        <div class="ec-header">
-          <span class="ec-title" id="ec-title" data-en="Inline EC write">前台 EC 写入</span>
-          <code class="ec-mode">EC AW · 4+2</code>
-          <button class="ec-playback" type="button" aria-controls="ec-topology" hidden>
-            <span class="ec-pause-label" data-en="Pause">暂停</span>
-            <span class="ec-play-label" data-en="Play" hidden>播放</span>
-          </button>
+      <figure class="system-diagram" aria-labelledby="system-diagram-title" aria-describedby="system-data-note">
+        <figcaption class="system-diagram-title" id="system-diagram-title" data-en="Application storage systems">业务存储系统</figcaption>
+        <div class="system-apps">
+          <span data-en="Databases">数据库</span>
+          <span data-en="Data warehouses">数据仓库</span>
+          <span data-en="Object stores">对象系统</span>
+          <span data-en="File systems">文件系统</span>
         </div>
-        <div class="ec-plot">
-          <div class="ec-pipeline">
-            <div class="ec-stage ec-source">
-              <span class="ec-stage-title" data-en="Full stripe">完整条带</span>
-              <div class="ec-stripe">
-                <span>D1</span><span>D2</span><span>D3</span><span>D4</span>
+        <div class="system-sdk">
+          <strong>Blob SDK</strong>
+          <span>C11 · C++17</span>
+        </div>
+
+        <section class="system-core" aria-labelledby="system-core-title">
+          <h2 id="system-core-title" data-en="KyteStore distributed storage">KyteStore 分布式存储</h2>
+          <div class="system-planes">
+            <section class="system-plane system-control" aria-labelledby="control-plane-title">
+              <div class="system-plane-heading">
+                <h3 id="control-plane-title" data-en="Control plane">控制面</h3>
+                <span data-en="Discovery &amp; placement">发现与布局</span>
               </div>
-            </div>
-            <span class="ec-wire ec-send" aria-hidden="true"></span>
-            <div class="ec-stage ec-encoder">
-              <span class="ec-stage-title">Blob SDK</span>
-              <span class="ec-stage-label" data-en="Encode parity">生成校验分片</span>
-            </div>
+              <div class="system-services">
+                <div class="system-service">
+                  <strong>RootServer</strong>
+                  <span data-en="Discovery and disk registration">发现与磁盘注册</span>
+                </div>
+                <div class="system-service">
+                  <strong>MetaServer</strong>
+                  <span data-en="Blob metadata and placement">Blob 元数据与放置</span>
+                </div>
+              </div>
+              <div class="system-metastore">
+                <div class="system-metastore-heading">
+                  <strong>MetaStore</strong>
+                  <span data-en="Transactional metadata">事务元数据</span>
+                </div>
+                <div class="system-backends">
+                  <span class="system-backend-current">MySQL <small data-en="Implemented">已实现</small></span>
+                  <span class="system-backend-candidate">PostgreSQL · Redis <small data-en="Candidates">候选</small></span>
+                </div>
+              </div>
+            </section>
+
+            <section class="system-plane system-data" aria-labelledby="data-plane-title">
+              <div class="system-plane-heading">
+                <h3 id="data-plane-title" data-en="ChunkServer data plane">ChunkServer 数据面</h3>
+                <span data-en="Direct from the SDK">SDK 并行直连</span>
+              </div>
+              <div class="system-racks">
+                  <section class="system-rack" aria-labelledby="rack-a">
+                    <h4 id="rack-a" data-en="Server group A">服务器组 A</h4>
+                    <div class="system-rack-hosts">
+                      <div class="system-host">
+                        <span class="system-host-name" data-en="Server A1">服务器 A1</span>
+                        <ul class="system-disks" role="list">
+                          <li><span data-en="Disk 0">盘 0</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
+                          <li><span data-en="Disk 1">盘 1</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
+                        </ul>
+                      </div>
+                      <div class="system-host">
+                        <span class="system-host-name" data-en="Server A2">服务器 A2</span>
+                        <ul class="system-disks" role="list">
+                          <li><span data-en="Disk 0">盘 0</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
+                          <li><span data-en="Disk 1">盘 1</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </section>
+                  <section class="system-rack" aria-labelledby="rack-b">
+                    <h4 id="rack-b" data-en="Server group B">服务器组 B</h4>
+                    <div class="system-rack-hosts">
+                      <div class="system-host">
+                        <span class="system-host-name" data-en="Server B1">服务器 B1</span>
+                        <ul class="system-disks" role="list">
+                          <li><span data-en="Disk 0">盘 0</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
+                          <li><span data-en="Disk 1">盘 1</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
+                        </ul>
+                      </div>
+                      <div class="system-host">
+                        <span class="system-host-name" data-en="Server B2">服务器 B2</span>
+                        <ul class="system-disks" role="list">
+                          <li><span data-en="Disk 0">盘 0</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
+                          <li><span data-en="Disk 1">盘 1</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </section>
+              </div>
+              <p class="system-data-note" id="system-data-note" data-en="Each disk runs one ChunkServer and holds multiple chunks. C1–C3 illustrate chunk slots.">每块盘运行一个 ChunkServer，管理多个 Chunk。C1–C3 为示意。</p>
+            </section>
           </div>
-          <span class="ec-wire ec-feed" aria-hidden="true"></span>
-          <ol class="ec-hosts" id="ec-topology" role="list" aria-label="六台服务器及其磁盘和 Chunk" data-en-aria-label="Six physical hosts with their disks and chunks">
-            <li class="ec-host">
-              <span class="ec-packet" aria-hidden="true"></span>
-              <span class="ec-stem" aria-hidden="true"></span>
-              <div class="ec-host-card">
-                <div class="ec-host-heading">
-                  <span data-en="Host 1">服务器 1</span><code class="ec-shard">D1</code>
-                </div>
-                <div class="ec-disks">
-                  <div class="ec-disk ec-disk-target">
-                    <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
-                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 2，写入目标" data-en-aria-label="Chunk 2, write target">2</span></div>
-                  </div>
-                  <div class="ec-disk">
-                    <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
-                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li class="ec-host">
-              <span class="ec-packet" aria-hidden="true"></span>
-              <span class="ec-stem" aria-hidden="true"></span>
-              <div class="ec-host-card">
-                <div class="ec-host-heading">
-                  <span data-en="Host 2">服务器 2</span><code class="ec-shard">D2</code>
-                </div>
-                <div class="ec-disks">
-                  <div class="ec-disk">
-                    <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
-                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
-                  </div>
-                  <div class="ec-disk ec-disk-target">
-                    <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
-                    <div class="ec-chunks"><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 1，写入目标" data-en-aria-label="Chunk 1, write target">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li class="ec-host">
-              <span class="ec-packet" aria-hidden="true"></span>
-              <span class="ec-stem" aria-hidden="true"></span>
-              <div class="ec-host-card">
-                <div class="ec-host-heading">
-                  <span data-en="Host 3">服务器 3</span><code class="ec-shard">D3</code>
-                </div>
-                <div class="ec-disks">
-                  <div class="ec-disk">
-                    <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
-                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
-                  </div>
-                  <div class="ec-disk ec-disk-target">
-                    <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
-                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 2，写入目标" data-en-aria-label="Chunk 2, write target">2</span></div>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li class="ec-host">
-              <span class="ec-packet" aria-hidden="true"></span>
-              <span class="ec-stem" aria-hidden="true"></span>
-              <div class="ec-host-card">
-                <div class="ec-host-heading">
-                  <span data-en="Host 4">服务器 4</span><code class="ec-shard">D4</code>
-                </div>
-                <div class="ec-disks">
-                  <div class="ec-disk ec-disk-target">
-                    <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
-                    <div class="ec-chunks"><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 1，写入目标" data-en-aria-label="Chunk 1, write target">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
-                  </div>
-                  <div class="ec-disk">
-                    <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
-                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li class="ec-host ec-parity">
-              <span class="ec-packet" aria-hidden="true"></span>
-              <span class="ec-stem" aria-hidden="true"></span>
-              <div class="ec-host-card">
-                <div class="ec-host-heading">
-                  <span data-en="Host 5">服务器 5</span><code class="ec-shard">P1</code>
-                </div>
-                <div class="ec-disks">
-                  <div class="ec-disk">
-                    <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
-                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
-                  </div>
-                  <div class="ec-disk ec-disk-target">
-                    <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
-                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 2，写入目标" data-en-aria-label="Chunk 2, write target">2</span></div>
-                  </div>
-                </div>
-              </div>
-            </li>
-            <li class="ec-host ec-parity">
-              <span class="ec-packet" aria-hidden="true"></span>
-              <span class="ec-stem" aria-hidden="true"></span>
-              <div class="ec-host-card">
-                <div class="ec-host-heading">
-                  <span data-en="Host 6">服务器 6</span><code class="ec-shard">P2</code>
-                </div>
-                <div class="ec-disks">
-                  <div class="ec-disk ec-disk-target">
-                    <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
-                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 2，写入目标" data-en-aria-label="Chunk 2, write target">2</span></div>
-                  </div>
-                  <div class="ec-disk">
-                    <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
-                    <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
-                  </div>
-                </div>
-              </div>
-            </li>
-          </ol>
-        </div>
-        <figcaption class="ec-caption" id="ec-caption">
-          <span class="ec-legend">
-            <span class="ec-key" data-en="Data">数据分片</span>
-            <span class="ec-key ec-parity" data-en="Parity">校验分片</span>
-          </span>
-          <span class="ec-disk-key" data-en="One ChunkServer per disk · Cells are chunks">每盘一个 ChunkServer · 方格为 Chunk</span>
-          <span class="ec-confirmed" data-en="6 ACKs → Append OK">6 次写入确认后返回</span>
-        </figcaption>
+        </section>
       </figure>
     </section>
 
-    <section class="content-section" id="sdk" aria-labelledby="sdk-title">
-      <h2 id="sdk-title" data-en="Read a Blob in C++">C++ 读一个 Blob</h2>
-      <div class="example-grid">
-        <article class="example">
-          <div class="example-header">
-            <h3 data-en="Synchronous read">同步读取</h3>
-            <button class="copy-button" data-copy="sync-code" type="button" hidden>
-              <span data-en="Copy">复制</span>
-            </button>
-          </div>
-          <pre><code id="sync-code" lang="en"><span class="code-keyword">auto</span> status = reader.<span class="code-call">PRead</span>(
-    offset, buffer, length,
-    bytes_read);</code></pre>
+    <section class="content-section" id="features" aria-labelledby="features-title">
+      <h2 id="features-title" data-en="Core features">核心特性</h2>
+      <div class="feature-grid">
+        <article class="feature-card">
+          <h3 data-en="Designed for EiB-scale clusters">面向 EiB 级集群</h3>
+          <p data-en="Add hosts and disks to grow the data plane. Each disk manages its own chunks. EiB is the cluster-scale design target.">通过增加服务器和磁盘扩展数据面，每块盘独立管理 Chunk。EiB 是集群规模的设计目标。</p>
         </article>
-        <article class="example">
-          <div class="example-header">
-            <h3 data-en="Asynchronous read">异步读取</h3>
-            <button class="copy-button" data-copy="async-code" type="button" hidden>
-              <span data-en="Copy">复制</span>
+        <article class="feature-card">
+          <h3 data-en="Open source and commercial use">开源与商业使用</h3>
+          <p data-en="The source carries AGPL-3.0, which permits commercial use under its terms.">源码采用 AGPL-3.0，可按许可证条款进行商业使用。</p>
+        </article>
+        <article class="feature-card feature-ec">
+          <h3 data-en="Native erasure coding">原生纠删码</h3>
+          <p data-en="Choose replication, stripe-aligned EC AW, or byte-granular EC UAW when creating a Blob. EC UAW protects a partial stripe with redo.">创建 Blob 时可选择多副本、对齐 EC AW 或非对齐 EC UAW。EC UAW 用 redo 保护未写满的条带。</p>
+        <figure class="ec-write" aria-labelledby="ec-title" aria-describedby="ec-caption">
+          <div class="ec-header">
+            <span class="ec-title" id="ec-title" data-en="Inline EC write">前台 EC 写入</span>
+            <code class="ec-mode">EC AW · 4+2</code>
+            <button class="ec-playback" type="button" aria-controls="ec-topology" hidden>
+              <span class="ec-pause-label" data-en="Pause">暂停</span>
+              <span class="ec-play-label" data-en="Play" hidden>播放</span>
             </button>
           </div>
-          <pre><code id="async-code" lang="en"><span class="code-keyword">auto</span> submitted = reader.<span class="code-call">PReadAsync</span>(
-    offset, buffer, length,
-    bytes_read, done);</code></pre>
+          <div class="ec-plot">
+            <div class="ec-pipeline">
+              <div class="ec-stage ec-source">
+                <span class="ec-stage-title" data-en="Full stripe">完整条带</span>
+                <div class="ec-stripe">
+                  <span>D1</span><span>D2</span><span>D3</span><span>D4</span>
+                </div>
+              </div>
+              <span class="ec-wire ec-send" aria-hidden="true"></span>
+              <div class="ec-stage ec-encoder">
+                <span class="ec-stage-title">Blob SDK</span>
+                <span class="ec-stage-label" data-en="Encode parity">生成校验分片</span>
+              </div>
+            </div>
+            <span class="ec-wire ec-feed" aria-hidden="true"></span>
+            <ol class="ec-hosts" id="ec-topology" role="list" aria-label="六台服务器及其磁盘和 Chunk" data-en-aria-label="Six physical hosts with their disks and chunks">
+              <li class="ec-host">
+                <span class="ec-packet" aria-hidden="true"></span>
+                <span class="ec-stem" aria-hidden="true"></span>
+                <div class="ec-host-card">
+                  <div class="ec-host-heading">
+                    <span data-en="Host 1">服务器 1</span><code class="ec-shard">D1</code>
+                  </div>
+                  <div class="ec-disks">
+                    <div class="ec-disk ec-disk-target">
+                      <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
+                      <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 2，写入目标" data-en-aria-label="Chunk 2, write target">2</span></div>
+                    </div>
+                    <div class="ec-disk">
+                      <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
+                      <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="ec-host">
+                <span class="ec-packet" aria-hidden="true"></span>
+                <span class="ec-stem" aria-hidden="true"></span>
+                <div class="ec-host-card">
+                  <div class="ec-host-heading">
+                    <span data-en="Host 2">服务器 2</span><code class="ec-shard">D2</code>
+                  </div>
+                  <div class="ec-disks">
+                    <div class="ec-disk">
+                      <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
+                      <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                    </div>
+                    <div class="ec-disk ec-disk-target">
+                      <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
+                      <div class="ec-chunks"><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 1，写入目标" data-en-aria-label="Chunk 1, write target">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="ec-host">
+                <span class="ec-packet" aria-hidden="true"></span>
+                <span class="ec-stem" aria-hidden="true"></span>
+                <div class="ec-host-card">
+                  <div class="ec-host-heading">
+                    <span data-en="Host 3">服务器 3</span><code class="ec-shard">D3</code>
+                  </div>
+                  <div class="ec-disks">
+                    <div class="ec-disk">
+                      <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
+                      <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                    </div>
+                    <div class="ec-disk ec-disk-target">
+                      <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
+                      <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 2，写入目标" data-en-aria-label="Chunk 2, write target">2</span></div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="ec-host">
+                <span class="ec-packet" aria-hidden="true"></span>
+                <span class="ec-stem" aria-hidden="true"></span>
+                <div class="ec-host-card">
+                  <div class="ec-host-heading">
+                    <span data-en="Host 4">服务器 4</span><code class="ec-shard">D4</code>
+                  </div>
+                  <div class="ec-disks">
+                    <div class="ec-disk ec-disk-target">
+                      <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
+                      <div class="ec-chunks"><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 1，写入目标" data-en-aria-label="Chunk 1, write target">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                    </div>
+                    <div class="ec-disk">
+                      <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
+                      <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="ec-host ec-parity">
+                <span class="ec-packet" aria-hidden="true"></span>
+                <span class="ec-stem" aria-hidden="true"></span>
+                <div class="ec-host-card">
+                  <div class="ec-host-heading">
+                    <span data-en="Host 5">服务器 5</span><code class="ec-shard">P1</code>
+                  </div>
+                  <div class="ec-disks">
+                    <div class="ec-disk">
+                      <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
+                      <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                    </div>
+                    <div class="ec-disk ec-disk-target">
+                      <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
+                      <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 2，写入目标" data-en-aria-label="Chunk 2, write target">2</span></div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="ec-host ec-parity">
+                <span class="ec-packet" aria-hidden="true"></span>
+                <span class="ec-stem" aria-hidden="true"></span>
+                <div class="ec-host-card">
+                  <div class="ec-host-heading">
+                    <span data-en="Host 6">服务器 6</span><code class="ec-shard">P2</code>
+                  </div>
+                  <div class="ec-disks">
+                    <div class="ec-disk ec-disk-target">
+                      <span class="ec-disk-label" data-en="Disk 0">盘 0</span>
+                      <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk ec-chunk-target" role="img" aria-label="Chunk 2，写入目标" data-en-aria-label="Chunk 2, write target">2</span></div>
+                    </div>
+                    <div class="ec-disk">
+                      <span class="ec-disk-label" data-en="Disk 1">盘 1</span>
+                      <div class="ec-chunks"><span class="ec-chunk" role="img" aria-label="Chunk 1">1</span><span class="ec-chunk" role="img" aria-label="Chunk 2">2</span></div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </ol>
+          </div>
+          <figcaption class="ec-caption" id="ec-caption">
+            <span class="ec-legend">
+              <span class="ec-key" data-en="Data">数据分片</span>
+              <span class="ec-key ec-parity" data-en="Parity">校验分片</span>
+            </span>
+            <span class="ec-disk-key" data-en="One ChunkServer per disk · Cells are chunks">每盘一个 ChunkServer · 方格为 Chunk</span>
+            <span class="ec-confirmed" data-en="6 ACKs → Append OK">6 次写入确认后返回</span>
+          </figcaption>
+        </figure>
         </article>
       </div>
-      <p class="example-note" data-en="reader is an open read handle. For an accepted async request, keep the buffer, bytes_read, and BlobCompletion alive until done.Done reports the final status. The callback may run inline.">reader 是已打开的读句柄。异步提交成功后，保留缓冲区、bytes_read 和 BlobCompletion，直至 done.Done 回调返回最终状态。回调也可能在提交调用内执行。</p>
+    </section>
+
+    <section class="content-section" id="sdk" aria-labelledby="sdk-title">
+      <span class="anchor" id="use-cases" aria-hidden="true"></span>
+      <h2 id="sdk-title" data-en="SDK integration">接入方式</h2>
+      <p class="section-note" data-en="Start with a connected SDK and a new Blob name. The write handle can read back the bytes it has just appended.">传入已连接的 SDK 和一个新 Blob 名称。写句柄可以直接读回刚追加的数据。</p>
+      <div class="sdk-tabs" aria-label="SDK 示例语言" data-en-aria-label="SDK example language" role="tablist" hidden>
+        <button class="sdk-tab" id="sdk-c-tab" type="button" role="tab" aria-selected="true" aria-controls="sdk-c-panel">C</button>
+        <button class="sdk-tab" id="sdk-cpp-tab" type="button" role="tab" aria-selected="false" aria-controls="sdk-cpp-panel" tabindex="-1">C++</button>
+      </div>
+      <div class="example-panels">
+        <article class="example" id="sdk-c-panel">
+          <div class="example-header">
+            <h3>C11</h3>
+            <button class="copy-button" data-copy="code-c" type="button" hidden>
+              <span data-en="Copy">复制</span>
+            </button>
+          </div>
+          <pre tabindex="0" aria-label="C11 SDK"><code id="code-c" lang="en"><span class="code-keyword">#include</span> &lt;kytestore/c/blob.h&gt;
+
+kytestore_blob_status_t round_trip(kytestore_blob_client_t *sdk,
+                                  kytestore_blob_string_view_t name,
+                                  char output[4], size_t *count) {
+  kytestore_blob_create_options_t spec = {
+    .capacity_bytes = 1U &lt;&lt; 20, .blob_name = name,
+    .replica_type = KYTESTORE_REPLICA, .replica_count = 1,
+  };
+  const kytestore_blob_completion_t blocking = {0};
+  kytestore_blob_id_t id;
+  kytestore_blob_handle_t *blob = NULL;
+  kytestore_blob_append_result_t written;
+  kytestore_blob_status_t status = <span class="code-call">kytestore_blob_create</span>(sdk, spec, &amp;id);
+  if (!status.code)
+    status = <span class="code-call">kytestore_blob_open</span>(sdk, id, KYTESTORE_BLOB_APPEND, &amp;blob);
+  if (!status.code)
+    status = <span class="code-call">kytestore_blob_append</span>(blob, "Kyte", 4, &amp;written, blocking);
+  if (!status.code)
+    status = <span class="code-call">kytestore_blob_pread</span>(blob, written.offset, output, 4, count, blocking);
+  if (blob) {
+    kytestore_blob_status_t closed = <span class="code-call">kytestore_blob_close</span>(blob);
+    <span class="code-call">kytestore_blob_handle_release</span>(blob);
+    if (!status.code) status = closed;
+  }
+  return status;
+}</code></pre>
+        </article>
+        <article class="example" id="sdk-cpp-panel">
+          <div class="example-header">
+            <h3>C++17</h3>
+            <button class="copy-button" data-copy="code-cpp" type="button" hidden>
+              <span data-en="Copy">复制</span>
+            </button>
+          </div>
+          <pre tabindex="0" aria-label="C++17 SDK"><code id="code-cpp" lang="en"><span class="code-keyword">#include</span> &lt;kytestore/sdk.h&gt;
+
+kytestore::Status round_trip(kytestore::Sdk&amp; sdk, std::string_view name,
+                             char (&amp;output)[4], size_t&amp; count) {
+  kytestore::BlobCreateOptions spec{1U &lt;&lt; 20, kytestore::ReplicaType::Replica, name};
+  spec.replica_count = 1;
+  kytestore::BlobId id{};
+  auto status = sdk.<span class="code-call">CreateBlob</span>(spec, id);
+  if (!status.ok()) return status;
+
+  kytestore::BlobHandle blob;
+  status = sdk.<span class="code-call">OpenBlob</span>(id, kytestore::BlobOpenMode::Append, blob);
+  if (!status.ok()) return status;
+
+  kytestore::BlobAppendResult written{};
+  status = blob.<span class="code-call">Append</span>("Kyte", written);
+  if (status.ok()) status = blob.<span class="code-call">PRead</span>(written.offset, output, sizeof(output), count);
+  auto closed = blob.<span class="code-call">Close</span>();
+  return status.ok() ? closed : status;
+}</code></pre>
+        </article>
+      </div>
       <p id="copy-feedback" class="visually-hidden" role="status"></p>
     </section>
 
-    <section class="content-section" id="use-cases" aria-labelledby="cases-title">
-      <h2 id="cases-title" data-en="Where it fits">接入场景</h2>
-      <div class="case-grid">
-        <article class="use-case">
-          <span class="case-image case-database" aria-hidden="true"></span>
-          <div>
-            <h3 data-en="Distributed storage for RocksDB">RocksDB 分布式存储</h3>
-            <p data-en="Map data such as SST files to Blobs through a RocksDB filesystem adapter. Writes and reads use the SDK directly, removing the HDFS dependency from that path.">通过 RocksDB 文件系统适配层，将 SST 等数据映射为 Blob。读写由 SDK 直连存储节点，精简接入链路，替换这条链路上的 HDFS 存储依赖。</p>
-          </div>
-        </article>
-        <article class="use-case">
-          <span class="case-image case-lakehouse" aria-hidden="true"></span>
-          <div>
-            <h3 data-en="A data layer for lakehouses">湖仓分布式存储</h3>
-            <p data-en="A lakehouse FileIO adapter can write directly to Blobs, bypassing OSS and NAS. With EC enabled, writes generate parity in the foreground. EC UAW uses redo to protect incomplete stripes.">通过湖仓 FileIO 适配层直连 Blob，绕过 OSS 和 NAS 中转。启用 EC 后，校验分片在前台写入路径生成，EC UAW 用 redo 保护尚未写满的条带。</p>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section class="content-section technology" id="architecture" aria-labelledby="technology-title">
+    <section class="content-section" id="architecture" aria-labelledby="technology-title">
       <span class="anchor" id="performance" aria-hidden="true"></span>
-      <h2 id="technology-title" data-en="Core technology">核心技术</h2>
-      <div class="tech-tabs" aria-label="核心技术主题" data-en-aria-label="Technology topics" role="tablist" hidden>
-        <button class="tech-tab" type="button" id="replica-tab" role="tab" aria-selected="true" aria-controls="replica-panel" data-en="Replication &amp; inline EC">副本与前台 EC</button>
-        <button class="tech-tab" type="button" id="rtc-tab" role="tab" aria-selected="false" aria-controls="rtc-panel" tabindex="-1">RTC</button>
-        <button class="tech-tab" type="button" id="zero-copy-tab" role="tab" aria-selected="false" aria-controls="zero-copy-panel" tabindex="-1">Zero Copy</button>
-      </div>
-
-      <div class="tech-panels">
-        <div class="tech-panel" id="replica-panel">
-          <h3 data-en="Choose redundancy for your write pattern">按写入方式选择冗余策略</h3>
-          <p data-en="The SDK uses the Blob's placement to write directly to ChunkServers. Each mode defines what must be written before an append can succeed.">SDK 按 Blob 的分片布局直写 ChunkServer。不同模式决定每次追加需要写入哪些副本或分片。</p>
-          <dl class="mode-grid">
-            <div class="tech-node">
-              <dt>Replica</dt>
-              <dd data-en="Complete copies on separate nodes. Accepts any append length.">在不同节点保存完整副本，支持任意长度追加。</dd>
-            </div>
-            <div class="tech-node">
-              <dt>EC AW</dt>
-              <dd data-en="Writes data and parity in the foreground. Appends must align to complete stripes.">在前台写入数据和校验分片，追加必须按完整条带对齐。</dd>
-            </div>
-            <div class="tech-node">
-              <dt>EC UAW</dt>
-              <dd data-en="Accepts byte-aligned appends. Redo protects the tail until formal parity is written for the full stripe.">支持任意长度追加，redo 保护未满条带，写满后生成正式校验分片。</dd>
-            </div>
-          </dl>
+      <h2 id="technology-title" data-en="Technology choices">技术选型</h2>
+      <dl class="technology-list">
+        <div>
+          <dt>EC UAW</dt>
+          <dd data-en="Append by byte. Redo protects the tail until the stripe fills and parity is written.">按字节追加。部分条带由 redo 保护，写满后生成正式校验分片。</dd>
         </div>
-
-        <div class="tech-panel" id="rtc-panel">
-          <h3 data-en="One coroutine takes each request to completion">同一协程推进请求直至完成</h3>
-          <p data-en="Each disk has its own ChunkServer. Photon coroutines yield while I/O is pending and resume the request when the disk completes it.">每块盘由独立的 ChunkServer 管理。Photon 协程在等待 I/O 时让出执行，磁盘返回后继续处理原请求。</p>
-          <ol class="pipeline" aria-label="ChunkServer 请求执行路径" data-en-aria-label="ChunkServer request path">
-            <li class="tech-node" data-en="Receive the request">接收请求</li>
-            <li class="tech-node" data-en="Run in a coroutine">协程执行</li>
-            <li class="tech-node" data-en="Yield while awaiting I/O">等待 I/O 时让出执行</li>
-            <li class="tech-node" data-en="Resume and reply">恢复协程并返回</li>
-          </ol>
+        <div>
+          <dt data-en="Parallel direct I/O">并行直连 ChunkServer</dt>
+          <dd data-en="The SDK looks up placement on the control plane and sends payloads directly to the target ChunkServers in parallel.">SDK 从控制面获得布局，向目标 ChunkServer 并行传输数据。</dd>
         </div>
-
-        <div class="tech-panel" id="zero-copy-panel">
-          <h3 data-en="Reuse DMA buffers on eligible I/O paths">符合条件的 I/O 复用 DMA 缓冲区</h3>
-          <p data-en="ChunkFS checks page CRCs and can reuse eligible DMA buffers on the direct I/O path, reducing payload copies. SPDK blobstore uses direct AIO to access the disk image.">ChunkFS 校验页面 CRC，并在符合条件的直接 I/O 路径上复用 DMA 缓冲区，减少数据拷贝。SPDK blobstore 通过直接 AIO 访问磁盘镜像。</p>
-          <ol class="pipeline" aria-label="存储节点缓冲区路径" data-en-aria-label="Storage node buffer path">
-            <li class="tech-node" data-en="ChunkFS page I/O">ChunkFS 页面 I/O</li>
-            <li class="tech-node" data-en="Reuse the DMA buffer">复用 DMA 缓冲区</li>
-            <li class="tech-node" data-en="Direct disk I/O">磁盘直接 I/O</li>
-          </ol>
+        <div>
+          <dt data-en="RTC execution">RTC 执行模型</dt>
+          <dd data-en="ChunkServer uses Photon coroutines. A request yields while awaiting I/O, then resumes in the same coroutine.">ChunkServer 使用 Photon 协程推进请求，等待 I/O 时让出执行，完成后原协程继续。</dd>
         </div>
-      </div>
+        <div>
+          <dt>Zero Copy</dt>
+          <dd data-en="On eligible paths, ChunkFS reuses DMA buffers to reduce payload copies.">ChunkFS 在符合条件的路径上复用 DMA 缓冲区，减少数据拷贝。</dd>
+        </div>
+        <div>
+          <dt>RDMA <span class="technology-option" data-en="Candidate">候选</span></dt>
+          <dd data-en="ChunkServer currently uses TCP. RDMA is a candidate for the data-plane transport.">ChunkServer 当前使用 TCP，RDMA 是数据面传输的候选方向。</dd>
+        </div>
+      </dl>
     </section>
 
-    <section class="content-section" id="features" aria-labelledby="features-title">
-      <h2 id="features-title" data-en="SDK at a glance">能力清单</h2>
-      <div class="feature-frame">
-        <table class="feature-table" aria-labelledby="features-title">
-          <thead>
-            <tr>
-              <th scope="col" data-en="Capability">能力</th>
-              <th scope="col" data-en="API and support">接口与支持范围</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th scope="row" data-en="Blob lifecycle">Blob 管理</th>
-              <td><div class="api-list"><code>CreateBlob</code> <code>LookupBlobId</code> <code>OpenBlob</code> <code>StatBlob</code> <code>Close</code></div></td>
-            </tr>
-            <tr>
-              <th scope="row" data-en="Sync I/O">同步读写</th>
-              <td><div class="api-list"><code>Append</code> <code>PRead</code> <code>MultiPRead</code> <code>Sync</code></div></td>
-            </tr>
-            <tr>
-              <th scope="row" data-en="Async I/O">异步读写</th>
-              <td>
-                <div class="api-list"><code>AppendAsync</code> <code>PReadAsync</code> <code>MultiPReadAsync</code></div>
-                <span class="table-note" data-en="Accepted requests report the result through a completion callback.">提交成功后，通过完成回调获得操作结果。</span>
-              </td>
-            </tr>
-            <tr>
-              <th scope="row" data-en="Data protection">数据保护</th>
-              <td><div class="api-list"><code>Replica</code> <code>EC AW</code> <code>EC UAW</code></div></td>
-            </tr>
-            <tr>
-              <th scope="row" data-en="Snapshots &amp; backups">快照与备份</th>
-              <td data-en="The application layer handles snapshots, backups, and recovery.">快照、备份和恢复由应用层实现。</td>
-            </tr>
-          </tbody>
-        </table>
+    <section class="content-section" id="source" aria-labelledby="source-title">
+      <div class="source-card">
+        <div>
+          <h2 id="source-title" data-en="KyteStore on GitHub">在 GitHub 查看 KyteStore</h2>
+          <p data-en="The KyteStore 2.0 repository is currently private.">KyteStore 2.0 仓库目前为私有。</p>
+        </div>
+        <a class="primary-action" href="https://github.com/royguo/kytestore2.0" target="_blank" rel="noopener noreferrer" data-en="Open GitHub">打开 GitHub</a>
       </div>
     </section>
   </main>

@@ -80,19 +80,18 @@
     ecObserver.observe(ecWrite);
   }
 
-  const tabList = document.querySelector(".tech-tabs");
+  const tabList = document.querySelector(".sdk-tabs");
   const tabs = Array.from(tabList.querySelectorAll('[role="tab"]'));
   const panels = tabs.map((tab) => document.getElementById(tab.getAttribute("aria-controls")));
   let selectedIndex = 0;
 
-  function selectTechnology(index, animate) {
+  function selectSdkExample(index) {
     selectedIndex = index;
     tabs.forEach((tab, position) => {
       const selected = index === position;
       tab.setAttribute("aria-selected", String(selected));
       tab.tabIndex = selected ? 0 : -1;
       panels[position].hidden = !selected;
-      panels[position].classList.toggle("is-tracing", selected && animate);
     });
   }
 
@@ -100,10 +99,7 @@
     const panel = panels[index];
     panel.setAttribute("role", "tabpanel");
     panel.setAttribute("aria-labelledby", tab.id);
-    panel.tabIndex = 0;
-    tab.addEventListener("click", () => {
-      if (selectedIndex !== index) selectTechnology(index, true);
-    });
+    tab.addEventListener("click", () => selectSdkExample(index));
   });
 
   tabList.addEventListener("keydown", (event) => {
@@ -125,20 +121,12 @@
         return;
     }
     event.preventDefault();
-    selectTechnology(index, true);
+    selectSdkExample(index);
     tabs[index].focus();
   });
 
-  selectTechnology(0, false);
+  selectSdkExample(0);
   tabList.hidden = false;
-  if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      panels[selectedIndex].classList.add("is-tracing");
-      observer.disconnect();
-    }, { threshold: 0.16 });
-    observer.observe(document.querySelector(".tech-panels"));
-  }
 
   const copyFeedback = document.getElementById("copy-feedback");
   for (const button of document.querySelectorAll("[data-copy]")) {
