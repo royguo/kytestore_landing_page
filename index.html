@@ -18,8 +18,8 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="stylesheet" href="/assets/kytestore-v2.css?v=2">
-  <script src="/assets/kytestore-v2.js" defer></script>
+  <link rel="stylesheet" href="/assets/kytestore-v2.css?v=3">
+  <script src="/assets/kytestore-v2.js?v=2" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main" data-en="Skip to content">跳到正文</a>
@@ -55,15 +55,54 @@
         </div>
       </div>
 
-      <figure class="hero-flow">
-        <div class="hero-art">
-          <img src="/assets/images/kytestore-v2-flow.webp" alt="" width="2172" height="724" fetchpriority="high">
-          <span class="hero-signal" aria-hidden="true"></span>
+      <figure class="ec-write" aria-labelledby="ec-title" aria-describedby="ec-caption">
+        <div class="ec-header">
+          <span class="ec-title" id="ec-title" data-en="Inline EC write">前台 EC 写入</span>
+          <code class="ec-mode">EC AW · 4+2</code>
+          <button class="ec-replay" type="button" aria-label="重播 EC 写入动画" data-en-aria-label="Replay EC write animation" hidden>
+            <span data-en="Replay">重播</span>
+          </button>
         </div>
-        <figcaption class="flow-caption">
-          <span data-en="Database / Lakehouse">数据库 / 湖仓</span>
-          <span>Blob SDK</span>
-          <span>ChunkServers</span>
+        <div class="ec-layout">
+          <div class="ec-stage ec-source">
+            <span class="ec-stage-title" data-en="Full stripe">完整条带</span>
+            <div class="ec-stripe">
+              <span>D1</span><span>D2</span><span>D3</span><span>D4</span>
+            </div>
+          </div>
+          <span class="ec-wire ec-send" aria-hidden="true"></span>
+          <div class="ec-stage ec-encoder">
+            <span class="ec-stage-title">Blob SDK</span>
+            <span class="ec-stage-label" data-en="Encode parity">生成校验分片</span>
+          </div>
+          <span class="ec-wire ec-feed" aria-hidden="true"></span>
+          <ol class="ec-targets" role="list" aria-label="并行写入的 ChunkServer" data-en-aria-label="Parallel writes to ChunkServers">
+            <li class="ec-target">
+              <span class="ec-wire ec-route" aria-hidden="true"></span><code class="ec-shard">D1</code><span class="ec-node">CS 01</span>
+            </li>
+            <li class="ec-target">
+              <span class="ec-wire ec-route" aria-hidden="true"></span><code class="ec-shard">D2</code><span class="ec-node">CS 02</span>
+            </li>
+            <li class="ec-target">
+              <span class="ec-wire ec-route" aria-hidden="true"></span><code class="ec-shard">D3</code><span class="ec-node">CS 03</span>
+            </li>
+            <li class="ec-target">
+              <span class="ec-wire ec-route" aria-hidden="true"></span><code class="ec-shard">D4</code><span class="ec-node">CS 04</span>
+            </li>
+            <li class="ec-target ec-parity">
+              <span class="ec-wire ec-route" aria-hidden="true"></span><code class="ec-shard">P1</code><span class="ec-node">CS 05</span>
+            </li>
+            <li class="ec-target ec-parity">
+              <span class="ec-wire ec-route" aria-hidden="true"></span><code class="ec-shard">P2</code><span class="ec-node">CS 06</span>
+            </li>
+          </ol>
+        </div>
+        <figcaption class="ec-caption" id="ec-caption">
+          <span class="ec-legend">
+            <span class="ec-key" data-en="Data">数据分片</span>
+            <span class="ec-key ec-parity" data-en="Parity">校验分片</span>
+          </span>
+          <span class="ec-confirmed" data-en="6 ACKs → Append OK">6 次写入确认后返回</span>
         </figcaption>
       </figure>
     </section>

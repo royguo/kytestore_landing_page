@@ -49,6 +49,42 @@
     }
   });
 
+  const ecWrite = document.querySelector(".ec-write");
+  const ecReplay = ecWrite.querySelector(".ec-replay");
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  let ecFrame;
+
+  function playEcWrite() {
+    if (reducedMotion.matches) return;
+    cancelAnimationFrame(ecFrame);
+    ecWrite.classList.remove("is-writing");
+    ecFrame = requestAnimationFrame(() => {
+      ecFrame = requestAnimationFrame(() => ecWrite.classList.add("is-writing"));
+    });
+  }
+
+  function applyEcMotionPreference() {
+    ecReplay.hidden = reducedMotion.matches;
+    if (reducedMotion.matches) {
+      cancelAnimationFrame(ecFrame);
+      ecWrite.classList.remove("is-writing");
+    }
+  }
+
+  applyEcMotionPreference();
+  reducedMotion.addEventListener("change", applyEcMotionPreference);
+  ecReplay.addEventListener("click", playEcWrite);
+  if ("IntersectionObserver" in window) {
+    const ecObserver = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      playEcWrite();
+      ecObserver.disconnect();
+    }, { threshold: 0.45 });
+    ecObserver.observe(ecWrite);
+  } else {
+    playEcWrite();
+  }
+
   const tabList = document.querySelector(".tech-tabs");
   const tabs = Array.from(tabList.querySelectorAll('[role="tab"]'));
   const panels = tabs.map((tab) => document.getElementById(tab.getAttribute("aria-controls")));
