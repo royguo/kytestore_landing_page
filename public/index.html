@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f9f8f4">
+  <meta name="theme-color" content="#ffffff">
   <title data-en="KyteStore 2.0 | Open Source Distributed Blob Storage System">KyteStore 2.0 · 开源分布式 Blob 存储系统</title>
   <meta name="description" content="KyteStore 为数据库、数仓、对象系统和文件系统提供分布式 Blob 存储，支持原生 C/C++ SDK、多副本和前台纠删码。" data-en-content="Distributed Blob storage for databases, warehouses, object stores, and file systems, with a native C/C++ SDK, replication, and inline erasure coding.">
   <link rel="canonical" href="https://kytestore.com/">
@@ -12,14 +12,15 @@
   <meta property="og:title" content="KyteStore 2.0 · 开源分布式 Blob 存储系统" data-en-content="KyteStore 2.0 | Open Source Distributed Blob Storage System">
   <meta property="og:description" content="分布式 Blob 存储底座，支持原生 C/C++ SDK 和非对齐 EC。" data-en-content="A distributed Blob storage layer with a native C/C++ SDK and unaligned erasure coding.">
   <meta property="og:url" content="https://kytestore.com/">
-  <meta property="og:image" content="https://kytestore.com/assets/images/kytestore-v2-flow.webp">
+  <meta property="og:image" content="https://kytestore.com/assets/images/kytestore-topology.png">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="stylesheet" href="/assets/kytestore-v2.css?v=5">
-  <script src="/assets/kytestore-v2.js?v=4" defer></script>
+  <link rel="stylesheet" href="/assets/kytestore-theme.css">
+  <link rel="stylesheet" href="/assets/kytestore-v2.css?v=6">
+  <script src="/assets/kytestore-v2.js?v=5" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main" data-en="Skip to content">跳到正文</a>
@@ -31,10 +32,11 @@
         <a href="#overview" data-en="Overview">系统总览</a>
         <a href="#features" data-en="Features">核心特性</a>
         <a href="#sdk" data-en="Integration">接入方式</a>
-        <a href="#architecture" data-en="Technology">技术选型</a>
-        <a href="#source">GitHub</a>
+        <a href="#architecture" data-en="Technology">技术说明</a>
+        <a href="/docs/" data-en="Docs">使用文档</a>
       </nav>
       <div class="header-actions">
+        <a class="header-github" href="https://github.com/royguo/kytestore2.0" target="_blank" rel="noopener noreferrer">GitHub</a>
         <button class="lang-button" id="lang-toggle" type="button" lang="en" aria-label="Switch to English" hidden>EN</button>
       </div>
     </div>
@@ -46,23 +48,19 @@
         <h1 id="hero-title" data-en="Open Source Distributed Blob Storage System">开源分布式 Blob 存储系统</h1>
         <p data-en="A storage layer for databases, warehouses, object stores, and file systems, with a native C and C++ SDK.">通过原生 C、C++ SDK，为数据库、数仓、对象存储和文件系统提供分布式存储底座。</p>
         <div class="hero-actions">
-          <a class="primary-action" href="#sdk" data-en="See SDK examples">查看接入示例</a>
-          <a class="text-action" href="#features" data-en="Explore core features">查看核心特性</a>
+          <a class="primary-action" href="/docs/" data-en="Read the docs">使用文档</a>
+          <a class="text-action" href="#sdk" data-en="See SDK examples">查看接入示例</a>
         </div>
       </div>
 
-      <figure class="system-diagram" aria-labelledby="system-diagram-title" aria-describedby="system-data-note">
-        <figcaption class="system-diagram-title" id="system-diagram-title" data-en="Application storage systems">业务存储系统</figcaption>
+      <figure class="system-diagram" aria-label="KyteStore 物理拓扑" data-en-aria-label="KyteStore physical topology" aria-describedby="system-data-note">
         <div class="system-apps">
-          <span data-en="Databases">数据库</span>
-          <span data-en="Data warehouses">数据仓库</span>
-          <span data-en="Object stores">对象系统</span>
-          <span data-en="File systems">文件系统</span>
+          <div class="system-app"><span class="system-icon system-icon--database" aria-hidden="true"></span><span data-en="Databases">数据库</span></div>
+          <div class="system-app"><span class="system-icon system-icon--warehouse" aria-hidden="true"></span><span data-en="Data warehouses">数据仓库</span></div>
+          <div class="system-app"><span class="system-icon system-icon--objects" aria-hidden="true"></span><span data-en="Object stores">对象系统</span></div>
+          <div class="system-app"><span class="system-icon system-icon--folder" aria-hidden="true"></span><span data-en="File systems">文件系统</span></div>
         </div>
-        <div class="system-sdk">
-          <strong>Blob SDK</strong>
-          <span>C11 · C++17</span>
-        </div>
+        <div class="system-sdk">Blob SDK</div>
 
         <section class="system-core" aria-labelledby="system-core-title">
           <h2 id="system-core-title" data-en="KyteStore distributed storage">KyteStore 分布式存储</h2>
@@ -70,76 +68,75 @@
             <section class="system-plane system-control" aria-labelledby="control-plane-title">
               <div class="system-plane-heading">
                 <h3 id="control-plane-title" data-en="Control plane">控制面</h3>
-                <span data-en="Discovery &amp; placement">发现与布局</span>
               </div>
               <div class="system-services">
-                <div class="system-service">
-                  <strong>RootServer</strong>
-                  <span data-en="Discovery and disk registration">发现与磁盘注册</span>
-                </div>
-                <div class="system-service">
-                  <strong>MetaServer</strong>
-                  <span data-en="Blob metadata and placement">Blob 元数据与放置</span>
-                </div>
+                <div class="system-service"><strong>RootServer</strong></div>
+                <div class="system-service"><strong>MetaServer</strong></div>
               </div>
               <div class="system-metastore">
-                <div class="system-metastore-heading">
-                  <strong>MetaStore</strong>
-                  <span data-en="Transactional metadata">事务元数据</span>
-                </div>
-                <div class="system-backends">
-                  <span class="system-backend-current">MySQL <small data-en="Implemented">已实现</small></span>
-                  <span class="system-backend-candidate">PostgreSQL · Redis <small data-en="Candidates">候选</small></span>
-                </div>
+                <strong>MetaStore</strong>
+                <span>MySQL</span>
               </div>
             </section>
 
             <section class="system-plane system-data" aria-labelledby="data-plane-title">
               <div class="system-plane-heading">
                 <h3 id="data-plane-title" data-en="ChunkServer data plane">ChunkServer 数据面</h3>
-                <span data-en="Direct from the SDK">SDK 并行直连</span>
+                <span data-en="Parallel I/O from the SDK">SDK 并行直连</span>
               </div>
               <div class="system-racks">
-                  <section class="system-rack" aria-labelledby="rack-a">
-                    <h4 id="rack-a" data-en="Server group A">服务器组 A</h4>
-                    <div class="system-rack-hosts">
-                      <div class="system-host">
-                        <span class="system-host-name" data-en="Server A1">服务器 A1</span>
+                <section class="system-rack" aria-labelledby="rack-a">
+                  <h4 id="rack-a" data-en="Server group A">服务器组 A</h4>
+                  <div class="system-rack-hosts">
+                    <div class="system-host">
+                      <span class="system-host-name">A1</span>
+                      <div class="system-host-chassis">
                         <ul class="system-disks" role="list">
-                          <li><span data-en="Disk 0">盘 0</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
-                          <li><span data-en="Disk 1">盘 1</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
-                        </ul>
-                      </div>
-                      <div class="system-host">
-                        <span class="system-host-name" data-en="Server A2">服务器 A2</span>
-                        <ul class="system-disks" role="list">
-                          <li><span data-en="Disk 0">盘 0</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
-                          <li><span data-en="Disk 1">盘 1</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
+                          <li aria-label="磁盘 0，三个 Chunk" data-en-aria-label="Disk 0, three chunks"><span class="system-chunks" aria-hidden="true"><span></span><span></span><span></span></span></li>
+                          <li aria-label="磁盘 1，三个 Chunk" data-en-aria-label="Disk 1, three chunks"><span class="system-chunks" aria-hidden="true"><span></span><span></span><span></span></span></li>
                         </ul>
                       </div>
                     </div>
-                  </section>
-                  <section class="system-rack" aria-labelledby="rack-b">
-                    <h4 id="rack-b" data-en="Server group B">服务器组 B</h4>
-                    <div class="system-rack-hosts">
-                      <div class="system-host">
-                        <span class="system-host-name" data-en="Server B1">服务器 B1</span>
+                    <div class="system-host">
+                      <span class="system-host-name">A2</span>
+                      <div class="system-host-chassis">
                         <ul class="system-disks" role="list">
-                          <li><span data-en="Disk 0">盘 0</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
-                          <li><span data-en="Disk 1">盘 1</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
-                        </ul>
-                      </div>
-                      <div class="system-host">
-                        <span class="system-host-name" data-en="Server B2">服务器 B2</span>
-                        <ul class="system-disks" role="list">
-                          <li><span data-en="Disk 0">盘 0</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
-                          <li><span data-en="Disk 1">盘 1</span><span class="system-chunks"><code>C1</code><code>C2</code><code>C3</code></span></li>
+                          <li aria-label="磁盘 0，三个 Chunk" data-en-aria-label="Disk 0, three chunks"><span class="system-chunks" aria-hidden="true"><span></span><span></span><span></span></span></li>
+                          <li aria-label="磁盘 1，三个 Chunk" data-en-aria-label="Disk 1, three chunks"><span class="system-chunks" aria-hidden="true"><span></span><span></span><span></span></span></li>
                         </ul>
                       </div>
                     </div>
-                  </section>
+                  </div>
+                </section>
+                <section class="system-rack" aria-labelledby="rack-b">
+                  <h4 id="rack-b" data-en="Server group B">服务器组 B</h4>
+                  <div class="system-rack-hosts">
+                    <div class="system-host">
+                      <span class="system-host-name">B1</span>
+                      <div class="system-host-chassis">
+                        <ul class="system-disks" role="list">
+                          <li aria-label="磁盘 0，三个 Chunk" data-en-aria-label="Disk 0, three chunks"><span class="system-chunks" aria-hidden="true"><span></span><span></span><span></span></span></li>
+                          <li aria-label="磁盘 1，三个 Chunk" data-en-aria-label="Disk 1, three chunks"><span class="system-chunks" aria-hidden="true"><span></span><span></span><span></span></span></li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div class="system-host">
+                      <span class="system-host-name">B2</span>
+                      <div class="system-host-chassis">
+                        <ul class="system-disks" role="list">
+                          <li aria-label="磁盘 0，三个 Chunk" data-en-aria-label="Disk 0, three chunks"><span class="system-chunks" aria-hidden="true"><span></span><span></span><span></span></span></li>
+                          <li aria-label="磁盘 1，三个 Chunk" data-en-aria-label="Disk 1, three chunks"><span class="system-chunks" aria-hidden="true"><span></span><span></span><span></span></span></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </section>
               </div>
-              <p class="system-data-note" id="system-data-note" data-en="Each disk runs one ChunkServer and holds multiple chunks. C1–C3 illustrate chunk slots.">每块盘运行一个 ChunkServer，管理多个 Chunk。C1–C3 为示意。</p>
+              <div class="system-data-note" id="system-data-note">
+                <span class="system-key"><i aria-hidden="true"></i><span data-en="Disk">磁盘</span></span>
+                <span class="system-key system-key--chunk"><i aria-hidden="true"></i>Chunk</span>
+                <span data-en="One ChunkServer per disk">每盘一个 ChunkServer</span>
+              </div>
             </section>
           </div>
         </section>
@@ -150,16 +147,23 @@
       <h2 id="features-title" data-en="Core features">核心特性</h2>
       <div class="feature-grid">
         <article class="feature-card">
-          <h3 data-en="Designed for EiB-scale clusters">面向 EiB 级集群</h3>
-          <p data-en="Add hosts and disks to grow the data plane. Each disk manages its own chunks. EiB is the cluster-scale design target.">通过增加服务器和磁盘扩展数据面，每块盘独立管理 Chunk。EiB 是集群规模的设计目标。</p>
+          <h3 data-en="EiB-scale storage">EiB 级数据存储</h3>
+          <p data-en="Designed for EiB-scale clusters. Add servers and disks to expand the data plane.">以 EiB 级集群为设计目标，通过增加服务器和磁盘扩展数据面。</p>
         </article>
         <article class="feature-card">
-          <h3 data-en="Open source and commercial use">开源与商业使用</h3>
-          <p data-en="The source carries AGPL-3.0, which permits commercial use under its terms.">源码采用 AGPL-3.0，可按许可证条款进行商业使用。</p>
+          <h3 data-en="Open source">开源</h3>
+          <p data-en="Deploy for non-commercial use under AGPL-3.0. The license also governs commercial use.">采用 AGPL-3.0。非商业场景可按许可证条款自行部署，商业使用同样遵循许可证条款。</p>
         </article>
-        <article class="feature-card feature-ec">
-          <h3 data-en="Native erasure coding">原生纠删码</h3>
-          <p data-en="Choose replication, stripe-aligned EC AW, or byte-granular EC UAW when creating a Blob. EC UAW protects a partial stripe with redo.">创建 Blob 时可选择多副本、对齐 EC AW 或非对齐 EC UAW。EC UAW 用 redo 保护未写满的条带。</p>
+        <article class="feature-card">
+          <h3 data-en="Inline erasure coding">前台 EC</h3>
+          <p data-en="Choose replication, aligned EC, or byte-granular EC UAW for each Blob.">按 Blob 选择多副本、对齐 EC 或支持字节粒度追加的非对齐 EC UAW。</p>
+        </article>
+        <article class="feature-card">
+          <h3 data-en="Native C SDK">原生 C SDK</h3>
+          <p data-en="Use the C11 API to build bindings for other languages, or integrate with the C++17 SDK.">通过 C11 接口封装其他语言客户端，也可以直接使用 C++17 SDK。</p>
+        </article>
+      </div>
+      <div class="feature-ec">
         <figure class="ec-write" aria-labelledby="ec-title" aria-describedby="ec-caption">
           <div class="ec-header">
             <span class="ec-title" id="ec-title" data-en="Inline EC write">前台 EC 写入</span>
@@ -310,7 +314,6 @@
             <span class="ec-confirmed" data-en="6 ACKs → Append OK">6 次写入确认后返回</span>
           </figcaption>
         </figure>
-        </article>
       </div>
     </section>
 
@@ -392,38 +395,40 @@ kytestore::Status round_trip(kytestore::Sdk&amp; sdk, std::string_view name,
 
     <section class="content-section" id="architecture" aria-labelledby="technology-title">
       <span class="anchor" id="performance" aria-hidden="true"></span>
-      <h2 id="technology-title" data-en="Technology choices">技术选型</h2>
-      <dl class="technology-list">
-        <div>
-          <dt>EC UAW</dt>
-          <dd data-en="Append by byte. Redo protects the tail until the stripe fills and parity is written.">按字节追加。部分条带由 redo 保护，写满后生成正式校验分片。</dd>
-        </div>
-        <div>
-          <dt data-en="Parallel direct I/O">并行直连 ChunkServer</dt>
-          <dd data-en="The SDK looks up placement on the control plane and sends payloads directly to the target ChunkServers in parallel.">SDK 从控制面获得布局，向目标 ChunkServer 并行传输数据。</dd>
-        </div>
-        <div>
-          <dt data-en="RTC execution">RTC 执行模型</dt>
-          <dd data-en="ChunkServer uses Photon coroutines. A request yields while awaiting I/O, then resumes in the same coroutine.">ChunkServer 使用 Photon 协程推进请求，等待 I/O 时让出执行，完成后原协程继续。</dd>
-        </div>
-        <div>
-          <dt>Zero Copy</dt>
-          <dd data-en="On eligible paths, ChunkFS reuses DMA buffers to reduce payload copies.">ChunkFS 在符合条件的路径上复用 DMA 缓冲区，减少数据拷贝。</dd>
-        </div>
-        <div>
-          <dt>RDMA <span class="technology-option" data-en="Candidate">候选</span></dt>
-          <dd data-en="ChunkServer currently uses TCP. RDMA is a candidate for the data-plane transport.">ChunkServer 当前使用 TCP，RDMA 是数据面传输的候选方向。</dd>
-        </div>
-      </dl>
-    </section>
-
-    <section class="content-section" id="source" aria-labelledby="source-title">
-      <div class="source-card">
-        <div>
-          <h2 id="source-title" data-en="KyteStore on GitHub">在 GitHub 查看 KyteStore</h2>
-          <p data-en="The KyteStore 2.0 repository is currently private.">KyteStore 2.0 仓库目前为私有。</p>
-        </div>
-        <a class="primary-action" href="https://github.com/royguo/kytestore2.0" target="_blank" rel="noopener noreferrer" data-en="Open GitHub">打开 GitHub</a>
+      <h2 id="technology-title" data-en="Technical details">技术说明</h2>
+      <div class="technology-panel">
+        <table class="technology-table">
+          <thead>
+            <tr>
+              <th scope="col" data-en="Capability">能力</th>
+              <th scope="col" data-en="How it works">技术说明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row" data-en="Blob API">Blob API</th>
+              <td>
+                <div class="api-list">
+                  <code>Create</code><code>Open</code><code>Append</code><code>PRead</code><code>MultiPRead</code><code>Sync</code><code>Close</code>
+                </div>
+                <p data-en="Append and range reads offer synchronous and asynchronous operation.">追加、单区间读取和多区间读取均支持同步与异步调用。</p>
+                <a class="reference-link" href="https://github.com/royguo/kytestore2.0/blob/main/docs/publish/sdk.md#blob-interface" target="_blank" rel="noopener noreferrer" data-en="Full API reference">完整 API 列表</a>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row" data-en="RTC execution">RTC 执行模型</th>
+              <td data-en="A ChunkServer request runs to completion in one Photon coroutine. It yields during I/O and resumes in the same context, which reduces handoffs between threads.">ChunkServer 使用 Photon 协程将请求推进到完成。等待 I/O 时让出执行，完成后回到原协程，减少跨线程交接。</td>
+            </tr>
+            <tr>
+              <th scope="row">Zero Copy</th>
+              <td data-en="ChunkFS reuses DMA buffers on eligible paths. Fewer payload copies reduce CPU work and memory-bandwidth use.">ChunkFS 在符合条件的路径上复用 DMA 缓冲区，减少数据拷贝、CPU 开销与内存带宽占用。</td>
+            </tr>
+            <tr>
+              <th scope="row">RDMA</th>
+              <td data-en="RDMA lets the network adapter transfer directly to remote memory to reduce CPU involvement and network latency. It requires compatible adapters and a compatible network.">RDMA 可由网卡直接读写远端内存，降低 CPU 参与和网络时延，需要兼容的网卡和网络环境。</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
   </main>
@@ -436,9 +441,13 @@ kytestore::Status round_trip(kytestore::Sdk&amp; sdk, std::string_view name,
           <p><a href="mailto:service@kytestore.com">service@kytestore.com</a></p>
         </div>
         <nav class="footer-nav" aria-label="技术资料" data-en-aria-label="Technical resources">
-          <a href="/blog" data-en="Technical blog">技术博客</a>
-          <a href="/whitepaper" data-en="Archived whitepaper">历史白皮书</a>
-          <a href="/downloads/" data-en="Archived downloads">历史资料下载</a>
+          <a href="/docs/" data-en="Docs">使用文档</a>
+          <a class="github-link" id="source" href="https://github.com/royguo/kytestore2.0" target="_blank" rel="noopener noreferrer">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.64 7.64 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+            </svg>
+            GitHub
+          </a>
         </nav>
       </div>
       <div class="legal">

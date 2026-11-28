@@ -49,84 +49,94 @@
     }
   });
 
-  const ecWrite = document.querySelector(".ec-write");
-  const ecPlayback = ecWrite.querySelector(".ec-playback");
-  const ecPauseLabel = ecPlayback.querySelector(".ec-pause-label");
-  const ecPlayLabel = ecPlayback.querySelector(".ec-play-label");
-  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-  const canObserveEcWrite = "IntersectionObserver" in window;
-  let ecVisible = !canObserveEcWrite;
-  let ecManuallyPaused = false;
+  function setupEcPlayback() {
+    const ecWrite = document.querySelector(".ec-write");
+    if (!ecWrite) return;
+    const ecPlayback = ecWrite.querySelector(".ec-playback");
+    const ecPauseLabel = ecPlayback.querySelector(".ec-pause-label");
+    const ecPlayLabel = ecPlayback.querySelector(".ec-play-label");
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+    const canObserveEcWrite = "IntersectionObserver" in window;
+    let ecVisible = !canObserveEcWrite;
+    let ecManuallyPaused = false;
 
-  function updateEcPlayback() {
-    ecWrite.classList.toggle("is-animated", !reducedMotion.matches);
-    ecWrite.classList.toggle("is-paused", !ecVisible || ecManuallyPaused);
-    ecPlayback.hidden = reducedMotion.matches;
-    ecPauseLabel.hidden = ecManuallyPaused;
-    ecPlayLabel.hidden = !ecManuallyPaused;
-  }
+    function updateEcPlayback() {
+      ecWrite.classList.toggle("is-animated", !reducedMotion.matches);
+      ecWrite.classList.toggle("is-paused", !ecVisible || ecManuallyPaused);
+      ecPlayback.hidden = reducedMotion.matches;
+      ecPauseLabel.hidden = ecManuallyPaused;
+      ecPlayLabel.hidden = !ecManuallyPaused;
+    }
 
-  updateEcPlayback();
-  reducedMotion.addEventListener("change", updateEcPlayback);
-  ecPlayback.addEventListener("click", () => {
-    ecManuallyPaused = !ecManuallyPaused;
     updateEcPlayback();
-  });
-  if (canObserveEcWrite) {
-    const ecObserver = new IntersectionObserver(([entry]) => {
-      ecVisible = entry.isIntersecting;
+    reducedMotion.addEventListener("change", updateEcPlayback);
+    ecPlayback.addEventListener("click", () => {
+      ecManuallyPaused = !ecManuallyPaused;
       updateEcPlayback();
     });
-    ecObserver.observe(ecWrite);
-  }
-
-  const tabList = document.querySelector(".sdk-tabs");
-  const tabs = Array.from(tabList.querySelectorAll('[role="tab"]'));
-  const panels = tabs.map((tab) => document.getElementById(tab.getAttribute("aria-controls")));
-  let selectedIndex = 0;
-
-  function selectSdkExample(index) {
-    selectedIndex = index;
-    tabs.forEach((tab, position) => {
-      const selected = index === position;
-      tab.setAttribute("aria-selected", String(selected));
-      tab.tabIndex = selected ? 0 : -1;
-      panels[position].hidden = !selected;
-    });
-  }
-
-  tabs.forEach((tab, index) => {
-    const panel = panels[index];
-    panel.setAttribute("role", "tabpanel");
-    panel.setAttribute("aria-labelledby", tab.id);
-    tab.addEventListener("click", () => selectSdkExample(index));
-  });
-
-  tabList.addEventListener("keydown", (event) => {
-    let index;
-    switch (event.key) {
-      case "ArrowLeft":
-        index = (selectedIndex - 1 + tabs.length) % tabs.length;
-        break;
-      case "ArrowRight":
-        index = (selectedIndex + 1) % tabs.length;
-        break;
-      case "Home":
-        index = 0;
-        break;
-      case "End":
-        index = tabs.length - 1;
-        break;
-      default:
-        return;
+    if (canObserveEcWrite) {
+      const ecObserver = new IntersectionObserver(([entry]) => {
+        ecVisible = entry.isIntersecting;
+        updateEcPlayback();
+      });
+      ecObserver.observe(ecWrite);
     }
-    event.preventDefault();
-    selectSdkExample(index);
-    tabs[index].focus();
-  });
+  }
 
-  selectSdkExample(0);
-  tabList.hidden = false;
+  setupEcPlayback();
+
+  function setupSdkTabs() {
+    const tabList = document.querySelector(".sdk-tabs");
+    if (!tabList) return;
+    const tabs = Array.from(tabList.querySelectorAll('[role="tab"]'));
+    const panels = tabs.map((tab) => document.getElementById(tab.getAttribute("aria-controls")));
+    let selectedIndex = 0;
+
+    function selectSdkExample(index) {
+      selectedIndex = index;
+      tabs.forEach((tab, position) => {
+        const selected = index === position;
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+        panels[position].hidden = !selected;
+      });
+    }
+
+    tabs.forEach((tab, index) => {
+      const panel = panels[index];
+      panel.setAttribute("role", "tabpanel");
+      panel.setAttribute("aria-labelledby", tab.id);
+      tab.addEventListener("click", () => selectSdkExample(index));
+    });
+
+    tabList.addEventListener("keydown", (event) => {
+      let index;
+      switch (event.key) {
+        case "ArrowLeft":
+          index = (selectedIndex - 1 + tabs.length) % tabs.length;
+          break;
+        case "ArrowRight":
+          index = (selectedIndex + 1) % tabs.length;
+          break;
+        case "Home":
+          index = 0;
+          break;
+        case "End":
+          index = tabs.length - 1;
+          break;
+        default:
+          return;
+      }
+      event.preventDefault();
+      selectSdkExample(index);
+      tabs[index].focus();
+    });
+
+    selectSdkExample(0);
+    tabList.hidden = false;
+  }
+
+  setupSdkTabs();
 
   const copyFeedback = document.getElementById("copy-feedback");
   for (const button of document.querySelectorAll("[data-copy]")) {

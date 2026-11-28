@@ -1,0 +1,15 @@
+:root {
+  --ks-white: #ffffff;
+  --ks-ink: #172937;
+  --ks-muted: #506575;
+  --ks-accent: #228eb6;
+  --ks-action: #146481;
+  --ks-action-hover: #104d65;
+  --ks-cyan-wash: #edf7fb;
+  --ks-blue-wash: #edf3fb;
+  --ks-slate-wash: #f5f7fa;
+  --ks-indigo: #4c5b96;
+  --ks-indigo-wash: #f0f2fb;
+  --ks-line: #b9cbd8;
+  --ks-line-soft: #dce6ed;
+}

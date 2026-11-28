@@ -21,19 +21,20 @@
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="stylesheet" href="/assets/kytestore-theme.css">
     <style>
         :root {
-            --bg-primary: #FFFFFF;
-            --bg-secondary: #F7F7F8;
-            --bg-tertiary: #EFEFF1;
-            --text-primary: #111111;
-            --text-secondary: #333333;
-            --text-muted: #6B6F76;
-            --accent: #111111;
-            --accent-dim: #3F3F46;
-            --warm: #3F3F46;
-            --border: #E5E7EB;
-            --border-strong: #D1D5DB;
+            --bg-primary: var(--ks-white);
+            --bg-secondary: var(--ks-slate-wash);
+            --bg-tertiary: var(--ks-blue-wash);
+            --text-primary: var(--ks-ink);
+            --text-secondary: var(--ks-muted);
+            --text-muted: var(--ks-muted);
+            --accent: var(--ks-action);
+            --accent-dim: var(--ks-action-hover);
+            --warm: var(--ks-indigo);
+            --border: var(--ks-line-soft);
+            --border-strong: var(--ks-line);
         }
 
         * {
@@ -68,7 +69,7 @@
             z-index: 20;
             border-bottom: 1px solid var(--border);
             padding: 20px 0;
-            background: rgba(255, 255, 255, 0.88);
+            background: var(--ks-white);
             backdrop-filter: blur(10px);
         }
 
@@ -523,7 +524,7 @@
                     <a href="../index.html#architecture" data-i18n="nav-architecture">架构</a>
                     <a href="../index.html#performance" data-i18n="nav-performance">性能</a>
                     <a class="active" href="../blog.html" data-i18n="nav-blog">博客</a>
-                    <a href="../whitepaper.html" data-i18n="nav-docs">文档</a>
+                    <a href="/docs/" data-i18n="nav-docs">使用文档</a>
                     <a href="../index.html#contact" data-i18n="nav-contact">联系我们</a>
                     <button id="lang-toggle" data-i18n="lang-toggle" onclick="toggleLang()">EN</button>
                 </nav>
@@ -1131,7 +1132,7 @@
                 'nav-home': '首页',
                 'nav-architecture': '架构',
                 'nav-performance': '性能',
-                'nav-docs': '文档',
+                'nav-docs': '使用文档',
                 'nav-blog': '博客',
                 'nav-contact': '联系我们',
                 'lang-toggle': 'EN',

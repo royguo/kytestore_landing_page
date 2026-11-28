@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title data-en="KyteStore Documentation">KyteStore 使用文档</title>
+  <meta name="description" content="在 Linux 上编译 KyteStore，启动单机集群，通过 C 或 C++ SDK 写入和读取 Blob。" data-en-content="Build KyteStore on Linux, deploy a single-node cluster, and read and write Blob data from C or C++.">
+  <link rel="canonical" href="https://kytestore.com/docs/">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/assets/kytestore-theme.css">
+  <link rel="stylesheet" href="/assets/kytestore-v2.css?v=6">
+  <script src="/assets/kytestore-v2.js?v=5" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main" data-en="Skip to content">跳到正文</a>
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="wordmark" href="/" lang="en">KyteStore</a>
+      <nav class="main-nav" aria-label="主导航" data-en-aria-label="Main navigation">
+        <a href="/#overview" data-en="Overview">系统总览</a>
+        <a href="/#features" data-en="Features">核心特性</a>
+        <a href="/#sdk" data-en="Integration">接入方式</a>
+        <a href="/#architecture" data-en="Technology">技术说明</a>
+        <a href="/docs/" aria-current="page" data-en="Docs">使用文档</a>
+      </nav>
+      <div class="header-actions">
+        <a class="header-github" href="https://github.com/royguo/kytestore2.0" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <button class="lang-button" id="lang-toggle" type="button" lang="en" aria-label="Switch to English" hidden>EN</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell docs-main" id="main">
+    <div class="docs-intro">
+      <h1 data-en="KyteStore documentation">KyteStore 使用文档</h1>
+      <p data-en="Build KyteStore, start a single-node cluster, and use the SDK to write and read a Blob.">从源码编译 KyteStore，启动单机集群，再用 SDK 写入并读取一个 Blob。</p>
+    </div>
+    <nav class="docs-nav" aria-label="本页目录" data-en-aria-label="On this page">
+      <a href="#build" data-en="Build">编译安装</a>
+      <a href="#cluster" data-en="Start a cluster">启动集群</a>
+      <a href="#client" data-en="Use the SDK">使用 SDK</a>
+    </nav>
+
+    <section class="content-section docs-section" id="build" aria-labelledby="build-title">
+      <h2 id="build-title" data-en="Build and install">编译安装</h2>
+      <p data-en="Use Ubuntu 24.04 x86-64. From the root of the source checkout or release archive, install the build tools, build the pinned dependencies, and install KyteStore.">在 Ubuntu 24.04 x86-64 上，从源码仓库或发行包的根目录安装编译工具、构建锁定版本的依赖，再安装 KyteStore。</p>
+      <div class="example">
+        <pre tabindex="0" aria-label="编译安装命令" data-en-aria-label="Build and install commands"><code>sudo bash scripts/ci/install-ubuntu-deps.sh
+export CMAKE_BUILD_PARALLEL_LEVEL=8
+deps="$HOME/.local/kytestore-deps"
+export KYTESTORE_PREFIX="$HOME/.local/kytestore"
+bash scripts/ci/build-ut-deps.sh "$deps"
+bash scripts/ci/build-linux.sh install "$deps" "$PWD/build-release" "$KYTESTORE_PREFIX"
+"$KYTESTORE_PREFIX/bin/chunk_tools" --version</code></pre>
+      </div>
+      <p data-en="The installation has bin/, lib/, and include/ directories. Use a new directory for the first dependency build and retain it for the lifetime of the installation.">安装目录包含 bin/、lib/ 和 include/。首次编译依赖时使用空目录，并在使用这套安装期间保留该目录。</p>
+      <a class="reference-link" href="https://github.com/royguo/kytestore2.0/blob/main/docs/publish/build.md" target="_blank" rel="noopener noreferrer" data-en="Build and packaging reference">编译与打包参考</a>
+    </section>
+
+    <section class="content-section docs-section" id="cluster" aria-labelledby="cluster-title">
+      <h2 id="cluster-title" data-en="Start a single-node cluster">启动单机集群</h2>
+      <p data-en="Prepare a writable MySQL 8.4 database using InnoDB. Give the database account permission to apply the RootServer and MetaServer schemas. Set KYTE_MYSQL_PASSWORD in your shell before starting either service.">准备可写的 MySQL 8.4 InnoDB 数据库，数据库账户需能初始化 RootServer 和 MetaServer 的表结构。启动服务前，在当前终端设置 KYTE_MYSQL_PASSWORD。</p>
+      <h3 data-en="Start RootServer and MetaServer">启动 RootServer 和 MetaServer</h3>
+      <div class="example">
+        <pre tabindex="0" aria-label="RootServer 命令" data-en-aria-label="RootServer commands"><code>export PATH="$KYTESTORE_PREFIX/bin:$PATH"
+export KYTE_MYSQL_HOST=127.0.0.1 KYTE_MYSQL_PORT=3306
+export KYTE_MYSQL_DATABASE=kytestore KYTE_MYSQL_USER=kyte
+export KYTE_RS_CLUSTER_ID=7401 KYTE_RS_ENDPOINT=127.0.0.1:9700
+kytestore_rootserver schema apply
+kytestore_rootserver serve --listen=127.0.0.1 --port=9700 &amp;</code></pre>
+      </div>
+      <p data-en="After RootServer logs “RootServer membership ready,” start MetaServer from the same shell.">RootServer 日志出现 “RootServer membership ready” 后，在同一终端启动 MetaServer。</p>
+      <div class="example">
+        <pre tabindex="0" aria-label="MetaServer 命令" data-en-aria-label="MetaServer commands"><code>kytestore_metaserver schema apply --rootserver-endpoints="$KYTE_RS_ENDPOINT"
+kytestore_metaserver serve --rootserver-endpoints="$KYTE_RS_ENDPOINT" --port=9800 &amp;</code></pre>
+      </div>
+      <h3 data-en="Register a disk with ChunkServer">启动 ChunkServer 并注册磁盘</h3>
+      <p data-en="Create a new disk image on a filesystem that supports direct I/O. Use --format-spdk only on its first start. Keep the data, metadata, and node configuration paths for restarts.">在支持 Direct I/O 的文件系统上新建磁盘镜像。仅在首次初始化时使用 --format-spdk，重启时复用数据、元数据和节点配置目录。</p>
+      <div class="example">
+        <pre tabindex="0" aria-label="ChunkServer 命令" data-en-aria-label="ChunkServer commands"><code>disk=$(mktemp -d "$HOME/kytestore-demo.XXXXXX")
+export KYTE_DISK_DATA_DIR="$disk/data" KYTE_DISK_META_DIR="$disk/meta"
+export KYTE_NODE_CONFIG_DIR="$disk/node"
+mkdir -p "$KYTE_DISK_DATA_DIR" "$KYTE_DISK_META_DIR" "$KYTE_NODE_CONFIG_DIR"
+fallocate -l 256M "$KYTE_DISK_DATA_DIR/device.img"
+kytestore_chunkserver 19000 --rootserver-endpoints="$KYTE_RS_ENDPOINT" \
+  --admin-port=19001 --format-spdk &amp;</code></pre>
+      </div>
+      <p data-en="When ChunkServer logs “registered node=” and MetaServer logs “MetaServer bound namespace_id=,” check the disk with the following command.">ChunkServer 日志出现 “registered node=”，且 MetaServer 日志出现 “MetaServer bound namespace_id=” 后，检查磁盘状态。</p>
+      <div class="example">
+        <pre tabindex="0" aria-label="磁盘状态命令" data-en-aria-label="Disk status command"><code>chunk_tools status --admin 127.0.0.1:19001</code></pre>
+      </div>
+    </section>
+
+    <section class="content-section docs-section" id="client" aria-labelledby="client-title">
+      <h2 id="client-title" data-en="Use the SDK">使用 SDK</h2>
+      <p data-en="Link KyteStore::sdk and give the client the RootServer address. Create a Blob, open it by ID, append bytes, read them back by offset, then close the handle.">客户端链接 KyteStore::sdk，并配置 RootServer 地址。创建 Blob 后按 ID 打开，追加写入数据，再按偏移读取并关闭句柄。</p>
+      <p data-en="The SDK example guide includes complete C11 and C++17 programs and their CMake targets. Save the example files and CMakeLists.txt together, then build with the installed package. Use a fresh Blob name on each run.">SDK 示例包含完整的 C11、C++17 程序与 CMake 配置。将示例文件和 CMakeLists.txt 放在一起，使用已安装的 SDK 编译。每次运行写入示例时请选择未使用过的 Blob 名称。</p>
+      <div class="example">
+        <pre tabindex="0" aria-label="编译并运行客户端命令" data-en-aria-label="Build and run the client"><code>cmake -S . -B build -DCMAKE_PREFIX_PATH="$KYTESTORE_PREFIX"
+cmake --build build
+./build/blob_c "$KYTE_RS_ENDPOINT" examples/c-sync-001 sync
+./build/blob_cpp "$KYTE_RS_ENDPOINT" examples/cpp-async-001 async</code></pre>
+      </div>
+      <p><a class="reference-link" href="/#sdk" data-en="C and C++ integration snippets">C 与 C++ 接入示例</a></p>
+      <p><a class="reference-link" href="https://github.com/royguo/kytestore2.0/blob/main/docs/publish/sdk-examples.md#build-and-run" target="_blank" rel="noopener noreferrer" data-en="Complete examples and CMake setup">完整示例与 CMake 配置</a></p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <div class="footer-main">
+        <a class="wordmark" href="/" lang="en">KyteStore</a>
+        <nav class="footer-nav" aria-label="站点链接" data-en-aria-label="Site links">
+          <a href="mailto:service@kytestore.com">service@kytestore.com</a>
+          <a href="https://github.com/royguo/kytestore2.0" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </nav>
+      </div>
+      <div class="legal">
+        <span data-en="© 2026 Beijing Jizhi Innovation Technology Co., Ltd.">© 2026 北京集智创新科技有限公司</span>
+        <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" lang="zh-CN">京ICP备2026020005号-1</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
