@@ -136,16 +136,43 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 
 .hero h1 {
+  position: relative;
   max-inline-size: 1000px;
   margin-inline: auto;
+  color: var(--ks-action-hover);
   font-size: clamp(1.75rem, 4.15vw, 3.4rem);
   font-weight: 650;
   letter-spacing: -0.028em;
   line-height: 1.17;
+  text-shadow: 0 -1px #b5d7e3, 0 1px #f0faff, 0 2px #9dc9d8, 0 3px #d9edf4;
   text-wrap: balance;
 }
 
 .hero h1:lang(en) { max-inline-size: 24ch; letter-spacing: -0.036em; }
+
+.hero h1::after {
+  position: absolute;
+  inset: 0;
+  color: #2b708e;
+  text-shadow: 0 -1px #9bc7d8;
+  /* Follow each line box so the gloss moves with the heading as it wraps. */
+  clip-path: polygon(
+    0 0, 100% 0, 100% .47lh, 0 .56lh,
+    0 1lh, 100% 1lh, 100% 1.47lh, 0 1.56lh,
+    0 2lh, 100% 2lh, 100% 2.47lh, 0 2.56lh,
+    0 3lh, 100% 3lh, 100% 3.47lh, 0 3.56lh
+  );
+  pointer-events: none;
+  user-select: none;
+  content: attr(data-zh) / "";
+}
+
+.hero h1:lang(en)::after { content: attr(data-en) / ""; }
+
+@media (forced-colors: active) {
+  .hero h1 { text-shadow: none; }
+  .hero h1::after { content: none; }
+}
 
 .hero-copy > p {
   max-inline-size: 740px;
@@ -221,7 +248,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   padding: 5px;
   border: 1px solid var(--ks-line);
   border-radius: 8px;
-  background: var(--ks-white);
+  background: var(--ks-cyan-wash);
   color: var(--ks-ink);
   font-weight: 630;
   line-height: 1.25;
@@ -291,7 +318,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   border: 1.5px solid;
   border-bottom: 0;
   border-radius: 2px 2px 0 0;
-  background: var(--ks-white);
+  background: var(--ks-cyan-wash);
 }
 
 .system-app::after, .system-sdk::before, .system-sdk::after {
@@ -331,7 +358,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   padding: clamp(8px, 1.6vw, 18px);
   border: 1px solid var(--ks-line);
   border-radius: 10px;
-  background: var(--ks-white);
+  background: #e6f3f8;
 }
 
 .system-core > h2 {
@@ -383,6 +410,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   padding: clamp(9px, 1.3vw, 15px);
   border: 1px solid var(--ks-line);
   border-radius: 8px;
+  background: #f5fafc;
 }
 
 .system-plane::before {
@@ -432,7 +460,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   padding: 6px 3px;
   border: 1px solid var(--ks-accent);
   border-radius: 5px;
-  background: var(--ks-white);
+  background: var(--ks-cyan-wash);
   color: var(--ks-ink);
   text-align: center;
 }
@@ -472,6 +500,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   padding: 7px;
   border: 1px solid var(--ks-line-soft);
   border-radius: 6px;
+  background: var(--ks-cyan-wash);
 }
 
 .system-rack h4 {
@@ -500,6 +529,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   padding: 17px 4px 4px;
   border: 1px solid var(--ks-accent);
   border-radius: 5px;
+  background: var(--ks-white);
 }
 
 .system-host-chassis::before, .system-host-chassis::after {
@@ -556,7 +586,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 
 .system-key { display: inline-flex; align-items: center; gap: 5px; }
-.system-key i { width: 14px; height: 8px; border: 1px solid var(--ks-line); border-radius: 2px; }
+.system-key i { width: 14px; height: 8px; border: 1px solid var(--ks-line); border-radius: 2px; background: var(--ks-white); }
 .system-key--chunk i { width: 9px; border-color: var(--ks-line-soft); background: var(--ks-cyan-wash); }
 
 .ec-write {
